@@ -142,13 +142,20 @@ fun PageScreen(model: AppModel, name: String, onOpen: (String) -> Unit, quickNot
     // (the next save reports the conflict instead). Missed ones reload when the block closes.
     var missed by remember(editor) { mutableStateOf(false) }
     LaunchedEffect(editor) {
-        api.events().catch { }.collect { ev ->
-            val type = ev["type"]?.jsonPrimitive?.content
-            val page = ev["name"]?.jsonPrimitive?.content
-            val client = ev["client"]?.jsonPrimitive?.content
-            if (type == "resync" || (page != null && page.equals(name, true) && client != api.clientId)) {
-                if (editing == null) editor.remoteChanged() else missed = true
+        // Reconnects after a dropped stream (as the home screen does), then reloads for what it missed.
+        var reconnect = false
+        while (true) {
+            api.events().catch { }.collect { ev ->
+                val type = ev["type"]?.jsonPrimitive?.content
+                val page = ev["name"]?.jsonPrimitive?.content
+                val client = ev["client"]?.jsonPrimitive?.content
+                val opened = type == "_open" && reconnect
+                if (opened || type == "resync" || (page != null && page.equals(name, true) && client != api.clientId)) {
+                    if (editing == null) editor.remoteChanged() else missed = true
+                }
+                if (type == "_open") reconnect = true
             }
+            kotlinx.coroutines.delay(5000)
         }
     }
     var unlocking by remember { mutableStateOf(false) }
