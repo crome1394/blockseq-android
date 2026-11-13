@@ -51,15 +51,16 @@ import app.blockseq.android.render.parts
 import app.blockseq.android.render.shownText
 import java.io.File
 
-/** Each widget's look: background (with its transparency), text colour, order. */
+/** Each widget's state: only a revision; the look is shared ([WidgetPrefs]). */
 object WidgetLook {
-    val BACKGROUND = intPreferencesKey("background")
-    val TEXT = intPreferencesKey("text")
-    val NEWEST_FIRST = booleanPreferencesKey("newest_first")
-    /** Bumped after every change to the phone's Scratchpad, so the widget reads it again. */
+    /** Bumped after every change to the phone's Scratchpad or the look, so the widget reads them again. */
     val REVISION = androidx.datastore.preferences.core.longPreferencesKey("revision")
-    const val DEFAULT_BACKGROUND = 0xE6202124.toInt()
-    const val DEFAULT_TEXT = 0xFFFFFFFF.toInt()
+}
+
+/** One line of the widget: a day heading, or a row. */
+private sealed interface Line {
+    data class Day(val day: String) : Line
+    data class Note(val content: String, val depth: Int, val waiting: Boolean) : Line
 }
 
 /**
@@ -76,58 +77,78 @@ class ScratchpadWidget : GlanceAppWidget() {
         provideContent {
             val prefs = currentState<Preferences>()
             // Read again whenever the revision changes (a sync or a new note), not only at start.
-            val state = androidx.compose.runtime.remember(prefs[WidgetLook.REVISION]) { ScratchpadStore.load(context) }
-            Content(
-                context, state, images,
-                background = Color(prefs[WidgetLook.BACKGROUND] ?: WidgetLook.DEFAULT_BACKGROUND),
-                text = Color(prefs[WidgetLook.TEXT] ?: WidgetLook.DEFAULT_TEXT),
-                newestFirst = prefs[WidgetLook.NEWEST_FIRST] ?: true,
-            )
+            val rev = prefs[WidgetLook.REVISION]
+            val state = androidx.compose.runtime.remember(rev) { ScratchpadStore.load(context) }
+            val look = androidx.compose.runtime.remember(rev) { WidgetPrefs.load(context) }
+            Content(context, state, images, look)
         }
     }
 
     @Composable
-    private fun Content(context: Context, state: ScratchState, images: File, background: Color, text: Color, newestFirst: Boolean) {
+    private fun Content(context: Context, state: ScratchState, images: File, look: WidgetLookPrefs) {
+        val text = Color(look.text)
         val fg = ColorProvider(text)
         val dim = ColorProvider(text.copy(alpha = 0.65f))
         val open = actionStartActivity(Intent(context, MainActivity::class.java).putExtra(MainActivity.OPEN_PAGE, SCRATCHPAD).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP))
         // Rows as synced plus notes not sent yet; each top-level row keeps its children with it.
-        val groups = mutableListOf<MutableList<Triple<String, Int, Boolean>>>()
-        state.rows.forEach { r -> if (r.depth == 0 || groups.isEmpty()) groups += mutableListOf(Triple(r.content, r.depth, false)) else groups.last() += Triple(r.content, r.depth, false) }
-        state.pending.forEach { groups += mutableListOf(Triple(it.content, 0, true)) }
-        val ordered = (if (newestFirst) groups.reversed() else groups).flatten()
-        Column(GlanceModifier.fillMaxSize().background(background).cornerRadius(16.dp).padding(12.dp)) {
+        val groups = mutableListOf<MutableList<Line.Note>>()
+        state.rows.forEach { r -> if (r.depth == 0 || groups.isEmpty()) groups += mutableListOf(Line.Note(r.content, r.depth, false)) else groups.last() += Line.Note(r.content, r.depth, false) }
+        state.pending.forEach { groups += mutableListOf(Line.Note(it.content, 0, true)) }
+        // A heading for each day; rows then show only their time.
+        val ordered = buildList {
+            var day: String? = null
+            for (g in if (look.newestFirst) groups.reversed() else groups) {
+                val d = splitStamp(shownText(g.first().content)).first?.substringBeforeLast(' ')
+                if (d != null && d != day) { add(Line.Day(d)); day = d }
+                addAll(g)
+            }
+        }
+        @Composable
+        fun Buttons() {
             Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Text(SCRATCHPAD, style = TextStyle(color = fg, fontSize = 16.sp, fontWeight = FontWeight.Bold), modifier = GlanceModifier.defaultWeight().clickable(open))
+                Image(ImageProvider(if (look.locked) R.drawable.ic_widget_lock else R.drawable.ic_widget_lock_open), if (look.locked) "Show notes" else "Hide notes", colorFilter = ColorFilter.tint(fg), modifier = GlanceModifier.size(28.dp).padding(3.dp).clickable(actionRunCallback<ToggleLock>()))
+                Spacer(GlanceModifier.width(10.dp))
                 Image(ImageProvider(R.drawable.ic_widget_sync), "Sync", colorFilter = ColorFilter.tint(fg), modifier = GlanceModifier.size(28.dp).padding(2.dp).clickable(actionRunCallback<SyncNow>()))
                 Spacer(GlanceModifier.width(10.dp))
                 Image(ImageProvider(R.drawable.ic_widget_add), "Add a note", colorFilter = ColorFilter.tint(fg), modifier = GlanceModifier.size(28.dp).padding(2.dp).clickable(actionStartActivity(Intent(context, QuickAddActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))))
             }
+        }
+        Column(GlanceModifier.fillMaxSize().background(Color(look.background)).cornerRadius(16.dp).padding(12.dp)) {
+            if (!look.buttonsBottom) Buttons()
             val status = buildList {
                 if (state.pending.isNotEmpty()) add("⏳ ${state.pending.size} waiting")
                 state.error?.let { add(it) } ?: state.lastSync?.let { add("synced ${android.text.format.DateUtils.getRelativeTimeSpanString(it)}") }
             }.joinToString(" · ")
             if (status.isNotEmpty()) Text(status, style = TextStyle(color = dim, fontSize = 11.sp), maxLines = 1)
             Spacer(GlanceModifier.height(6.dp))
-            if (ordered.isEmpty()) {
-                Text("Nothing yet. Tap + to add a note.", style = TextStyle(color = dim, fontSize = 13.sp))
-            } else {
-                LazyColumn(GlanceModifier.fillMaxSize()) {
-                    items(ordered) { (content, depth, waiting) ->
-                        Row(GlanceModifier.fillMaxWidth().padding(start = (depth * 14).dp, top = 4.dp, bottom = 4.dp).clickable(open)) {
-                            RowContent(content, waiting, images, fg, dim)
+            val body = GlanceModifier.fillMaxWidth().defaultWeight()
+            when {
+                look.locked -> Column(body, verticalAlignment = Alignment.CenterVertically, horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text("Notes hidden. Tap the padlock to show them.", style = TextStyle(color = dim, fontSize = 13.sp), modifier = GlanceModifier.clickable(actionRunCallback<ToggleLock>()))
+                }
+                ordered.isEmpty() -> Column(body) { Text("Nothing yet. Tap + to add a note.", style = TextStyle(color = dim, fontSize = 13.sp)) }
+                else -> LazyColumn(body) {
+                    items(ordered) { line ->
+                        when (line) {
+                            is Line.Day -> Text(line.day, style = TextStyle(color = fg, fontSize = 12.sp, fontWeight = FontWeight.Bold), modifier = GlanceModifier.padding(top = 8.dp, bottom = 2.dp))
+                            is Line.Note -> Row(GlanceModifier.fillMaxWidth().padding(start = (line.depth * 14).dp, top = 3.dp, bottom = 3.dp).clickable(open)) {
+                                RowContent(line.content, line.waiting, images, fg, dim)
+                            }
                         }
                     }
                 }
             }
+            if (look.buttonsBottom) { Spacer(GlanceModifier.height(6.dp)); Buttons() }
         }
     }
 
     @Composable
     private fun RowContent(content: String, waiting: Boolean, images: File, fg: ColorProvider, dim: ColorProvider) {
         val (stamp, body) = splitStamp(shownText(content))
+        val time = stamp?.substringAfterLast(' ')
         Column(GlanceModifier.fillMaxWidth()) {
-            if (stamp != null || waiting) Text(listOfNotNull(stamp, if (waiting) "⏳ not sent yet" else null).joinToString(" · "), style = TextStyle(color = dim, fontSize = 11.sp))
+            if (time != null || waiting) Text(listOfNotNull(time, if (waiting) "⏳ not sent yet" else null).joinToString(" · "), style = TextStyle(color = dim, fontSize = 11.sp))
             parts(body).forEach { part ->
                 when (part) {
                     is Part.Image -> {
@@ -158,9 +179,10 @@ class ScratchpadWidget : GlanceAppWidget() {
             }
         }
 
-        private val STAMP = Regex("""^\[\[([^\]]+)\]\]\s+(\d{1,2}:\d{2})\s*""")
+        // Seconds, if a stamp has them, are dropped.
+        private val STAMP = Regex("""^\[\[([^\]]+)\]\]\s+(\d{1,2}:\d{2})(?::\d{2})?\s*""")
 
-        /** "[[Nov 12th, 2026]] 21:48 Buy stakes" → ("Nov 12th, 2026 21:48", "Buy stakes"). */
+        /** "[[Nov 12th, 2026]] 21:48:05 Buy stakes" → ("Nov 12th, 2026 21:48", "Buy stakes"). */
         fun splitStamp(text: String): Pair<String?, String> {
             val m = STAMP.find(text) ?: return null to text
             return "${m.groupValues[1]} ${m.groupValues[2]}" to text.substring(m.range.last + 1)
@@ -173,6 +195,14 @@ class ScratchpadWidget : GlanceAppWidget() {
             .replace(Regex("""\*\*(.+?)\*\*|__(.+?)__"""), "$1$2")
             .replace(Regex("""``(.+?)``|`([^`]+)`"""), "$1$2")
             .replace(Regex("""~~(.+?)~~|==(.+?)=="""), "$1$2")
+    }
+}
+
+/** The widget's padlock: hides or shows the notes on every Scratchpad widget. */
+class ToggleLock : ActionCallback {
+    override suspend fun onAction(context: Context, glanceId: GlanceId, parameters: ActionParameters) {
+        WidgetPrefs.save(context, WidgetPrefs.load(context).let { it.copy(locked = !it.locked) })
+        ScratchpadWidget.refresh(context)
     }
 }
 

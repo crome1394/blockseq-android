@@ -43,9 +43,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.glance.appwidget.GlanceAppWidgetManager
-import androidx.glance.appwidget.state.updateAppWidgetState
-import androidx.glance.state.PreferencesGlanceStateDefinition
 import app.blockseq.android.ui.BlockseqTheme
 import kotlinx.coroutines.launch
 
@@ -54,7 +51,8 @@ private val TEXTS = listOf(0xFFFFFFFF, 0xFF000000, 0xFFE0E0E0, 0xFFFFD600, 0xFF6
 
 /**
  * Shown when the widget is placed (and again from "Reconfigure" on a long
- * press): background colour and how see-through it is, text colour, order.
+ * press). The look is shared by every widget and also lives in the app's
+ * Settings → Widget.
  */
 class WidgetConfigActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -66,46 +64,15 @@ class WidgetConfigActivity : ComponentActivity() {
         setContent {
             BlockseqTheme {
                 val scope = rememberCoroutineScope()
-                var bg by remember { mutableIntStateOf(BACKGROUNDS[0].toInt()) }
-                var alpha by remember { mutableFloatStateOf(0.9f) }
-                var fg by remember { mutableIntStateOf(TEXTS[0].toInt()) }
-                var newestFirst by remember { mutableStateOf(true) }
-                val background = Color(bg).copy(alpha = alpha)
+                var look by remember { mutableStateOf(WidgetPrefs.load(applicationContext)) }
                 Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).safeDrawingPadding().verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Text("Scratchpad widget", style = MaterialTheme.typography.headlineSmall)
-                    // Preview, over a checkerboard so transparency shows.
-                    Box(Modifier.fillMaxWidth().height(150.dp).background(Color(0xFF6A7B8C), RoundedCornerShape(16.dp)).padding(10.dp)) {
-                        Column(Modifier.fillMaxSize().background(background, RoundedCornerShape(16.dp)).padding(12.dp)) {
-                            Text("Scratchpad", color = Color(fg), fontSize = 16.sp)
-                            Text("Nov 12th, 2026 21:48", color = Color(fg).copy(alpha = 0.65f), fontSize = 11.sp)
-                            Text("Pick up stakes and twine", color = Color(fg), fontSize = 14.sp)
-                        }
-                    }
-                    Text("Background", style = MaterialTheme.typography.titleMedium)
-                    Swatches(BACKGROUNDS, bg) { bg = it }
-                    Text("See-through: ${((1 - alpha) * 100).toInt()}%  (0% solid, 100% fully transparent)")
-                    Slider(value = 1 - alpha, onValueChange = { alpha = 1 - it })
-                    Text("Text", style = MaterialTheme.typography.titleMedium)
-                    Swatches(TEXTS, fg) { fg = it }
-                    Text("Order", style = MaterialTheme.typography.titleMedium)
-                    listOf(true to "Newest first", false to "Oldest first").forEach { (value, label) ->
-                        Row(Modifier.fillMaxWidth().clickable { newestFirst = value }, verticalAlignment = Alignment.CenterVertically) {
-                            RadioButton(selected = newestFirst == value, onClick = { newestFirst = value })
-                            Text(label)
-                        }
-                    }
+                    WidgetLookEditor(look) { look = it }
                     Spacer(Modifier.height(8.dp))
                     Button(modifier = Modifier.fillMaxWidth(), onClick = {
                         scope.launch {
-                            val glanceId = GlanceAppWidgetManager(applicationContext).getGlanceIdBy(widgetId)
-                            updateAppWidgetState(applicationContext, PreferencesGlanceStateDefinition, glanceId) { prefs ->
-                                prefs.toMutablePreferences().apply {
-                                    this[WidgetLook.BACKGROUND] = background.toArgb()
-                                    this[WidgetLook.TEXT] = fg
-                                    this[WidgetLook.NEWEST_FIRST] = newestFirst
-                                }
-                            }
-                            ScratchpadWidget().update(applicationContext, glanceId)
+                            WidgetPrefs.save(applicationContext, look)
+                            ScratchpadWidget.refresh(applicationContext)
                             ScratchpadSync.schedule(applicationContext)
                             ScratchpadSync.request(applicationContext)
                             setResult(RESULT_OK, Intent().putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId))
@@ -114,6 +81,53 @@ class WidgetConfigActivity : ComponentActivity() {
                     }) { Text("Save") }
                 }
             }
+        }
+    }
+}
+
+/** Background (solid, see-through or transparent), text colour, order, button position, with a preview. */
+@Composable
+fun WidgetLookEditor(look: WidgetLookPrefs, onChange: (WidgetLookPrefs) -> Unit) {
+    val base = look.background or 0xFF000000.toInt()
+    val alpha = (look.background ushr 24) / 255f
+    fun bg(rgb: Int = base, a: Float = alpha) = Color(rgb).copy(alpha = a).toArgb()
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        // Preview, over a grey backdrop so transparency shows.
+        Box(Modifier.fillMaxWidth().height(150.dp).background(Color(0xFF6A7B8C), RoundedCornerShape(16.dp)).padding(10.dp)) {
+            Column(Modifier.fillMaxSize().background(Color(look.background), RoundedCornerShape(16.dp)).padding(12.dp)) {
+                val fg = Color(look.text)
+                val head = @Composable { Row { Text("Scratchpad", color = fg, fontSize = 16.sp, modifier = Modifier.weight(1f)); Text("🔓 ⟳ +", color = fg) } }
+                if (!look.buttonsBottom) head()
+                Text("Nov 12th, 2026", color = fg, fontSize = 12.sp)
+                Text("21:48", color = fg.copy(alpha = 0.65f), fontSize = 11.sp)
+                Text("Pick up stakes and twine", color = fg, fontSize = 14.sp, modifier = Modifier.weight(1f))
+                if (look.buttonsBottom) head()
+            }
+        }
+        Text("Background", style = MaterialTheme.typography.titleMedium)
+        Swatches(BACKGROUNDS, base) { onChange(look.copy(background = bg(rgb = it, a = if (alpha == 0f) 1f else alpha))) }
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            listOf("Solid" to 1f, "See-through" to 0.6f, "Transparent" to 0f).forEach { (label, a) ->
+                androidx.compose.material3.FilterChip(selected = alpha == a, onClick = { onChange(look.copy(background = bg(a = a))) }, label = { Text(label) })
+            }
+        }
+        Text("See-through: ${((1 - alpha) * 100).toInt()}%", style = MaterialTheme.typography.bodySmall)
+        Slider(value = 1 - alpha, onValueChange = { onChange(look.copy(background = bg(a = 1 - it))) })
+        Text("Text", style = MaterialTheme.typography.titleMedium)
+        Swatches(TEXTS, look.text) { onChange(look.copy(text = it)) }
+        Text("Order", style = MaterialTheme.typography.titleMedium)
+        Choice(listOf(true to "Newest first", false to "Oldest first"), look.newestFirst) { onChange(look.copy(newestFirst = it)) }
+        Text("Buttons (padlock, Sync, +)", style = MaterialTheme.typography.titleMedium)
+        Choice(listOf(false to "Top", true to "Bottom"), look.buttonsBottom) { onChange(look.copy(buttonsBottom = it)) }
+    }
+}
+
+@Composable
+private fun Choice(options: List<Pair<Boolean, String>>, value: Boolean, onPick: (Boolean) -> Unit) {
+    options.forEach { (v, label) ->
+        Row(Modifier.fillMaxWidth().clickable { onPick(v) }, verticalAlignment = Alignment.CenterVertically) {
+            RadioButton(selected = value == v, onClick = { onPick(v) })
+            Text(label)
         }
     }
 }
