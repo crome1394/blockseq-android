@@ -131,21 +131,26 @@ fun PageScreen(model: AppModel, name: String, onOpen: (String) -> Unit, quickNot
         PageEditor(api, name, model.statuses, model.key, scope, model::handle, model::markSynced)
     }
     LaunchedEffect(editor) { editor.load() }
-    // Live updates: another device saved this page.
-    LaunchedEffect(editor) {
-        api.events().catch { }.collect { ev ->
-            val type = ev["type"]?.jsonPrimitive?.content
-            val page = ev["name"]?.jsonPrimitive?.content
-            val client = ev["client"]?.jsonPrimitive?.content
-            if (type == "resync" || (page != null && page.equals(name, true) && client != api.clientId)) editor.remoteChanged()
-        }
-    }
     // The screen's own scope is cancelled as it leaves, so the last save runs in the app's.
     DisposableEffect(editor) { onDispose { model.viewModelScope.launch { editor.save() } } }
 
     var editing by remember(editor) { mutableStateOf<Node?>(null) }
     val editingId = editing?.id
     var field by remember(editor) { mutableStateOf(TextFieldValue("")) }
+    // Live updates: another device saved this page. Not while a block is open: its field
+    // holds the old text, and the next keystroke would overwrite theirs without a conflict
+    // (the next save reports the conflict instead). Missed ones reload when the block closes.
+    var missed by remember(editor) { mutableStateOf(false) }
+    LaunchedEffect(editor) {
+        api.events().catch { }.collect { ev ->
+            val type = ev["type"]?.jsonPrimitive?.content
+            val page = ev["name"]?.jsonPrimitive?.content
+            val client = ev["client"]?.jsonPrimitive?.content
+            if (type == "resync" || (page != null && page.equals(name, true) && client != api.clientId)) {
+                if (editing == null) editor.remoteChanged() else missed = true
+            }
+        }
+    }
     var unlocking by remember { mutableStateOf(false) }
     var tagging by remember(editor) { mutableStateOf<Node?>(null) }
     var menuFor by remember(editor) { mutableStateOf<Node?>(null) }
@@ -165,7 +170,10 @@ fun PageScreen(model: AppModel, name: String, onOpen: (String) -> Unit, quickNot
     }
     fun stopEdit() {
         editing = null
-        scope.launch { editor.save() }
+        scope.launch {
+            editor.save()
+            if (missed) { missed = false; editor.remoteChanged() }
+        }
     }
     // The journal's quick-note button: once loaded, type on the last row (a new one unless it is empty).
     LaunchedEffect(editor, editor.loaded) {
