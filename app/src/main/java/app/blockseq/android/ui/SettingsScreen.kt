@@ -69,6 +69,20 @@ fun SettingsScreen(model: AppModel, onBack: () -> Unit) {
                 androidx.compose.material3.Switch(checked = model.controlsAtBottom, onCheckedChange = { model.changeControlsAtBottom(it) })
             }
             HorizontalDivider()
+            Section("Code blocks")
+            val fold = model.codeFold
+            Row(Modifier.fillMaxWidth().clickable { model.changeCodeFold(fold.copy(on = !fold.on)) }, verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text("Fold long code blocks")
+                    Text("Long code blocks start folded, showing their first lines and a Show all bar (as in the web app).", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                androidx.compose.material3.Switch(checked = fold.on, onCheckedChange = { model.changeCodeFold(fold.copy(on = it)) })
+            }
+            if (fold.on) {
+                NumberSetting("Fold code blocks longer than (lines)", fold.lines, 2..1000) { model.changeCodeFold(fold.copy(lines = it)) }
+                NumberSetting("Lines to show when folded", fold.show, 1..200) { model.changeCodeFold(fold.copy(show = it)) }
+            }
+            HorizontalDivider()
             Section("Search field")
             var bottom by remember { mutableStateOf(model.store.searchAtBottom) }
             listOf(false to "Top", true to "Bottom (easier to reach with one hand)").forEach { (value, label) ->
@@ -104,4 +118,20 @@ fun SettingsScreen(model: AppModel, onBack: () -> Unit) {
 @Composable
 private fun Section(title: String) {
     Text(title, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+}
+
+@Composable
+private fun NumberSetting(label: String, value: Int, range: IntRange, onChange: (Int) -> Unit) {
+    var text by remember(value) { mutableStateOf(value.toString()) }
+    androidx.compose.material3.OutlinedTextField(
+        text,
+        { v ->
+            text = v.filter(Char::isDigit).take(4)
+            text.toIntOrNull()?.takeIf { it in range }?.let(onChange)
+        },
+        label = { Text(label) },
+        singleLine = true,
+        keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number),
+        modifier = Modifier.fillMaxWidth(),
+    )
 }

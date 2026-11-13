@@ -44,6 +44,14 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     var controlsAtBottom by mutableStateOf(store.controlsAtBottom)
         private set
 
+    var codeFold by mutableStateOf(store.codeFold)
+        private set
+
+    fun changeCodeFold(f: app.blockseq.android.data.CodeFold) {
+        store.codeFold = f
+        codeFold = f
+    }
+
     fun changeControlsAtBottom(on: Boolean) {
         store.controlsAtBottom = on
         controlsAtBottom = on

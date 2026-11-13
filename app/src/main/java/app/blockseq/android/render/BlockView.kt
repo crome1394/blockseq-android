@@ -129,16 +129,7 @@ fun BlockContent(
                         modifier = if (part.quote) Modifier.border(width = 0.dp, color = Color.Transparent).padding(start = 8.dp) else Modifier,
                     )
                 }
-                is Part.Code -> Text(
-                    part.code,
-                    fontFamily = FontFamily.Monospace,
-                    fontSize = 13.sp,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(6.dp))
-                        .horizontalScroll(rememberScrollState())
-                        .padding(10.dp),
-                )
+                is Part.Code -> CodeBlock(part.lang, part.code)
                 is Part.Maths -> Text(
                     part.tex,
                     fontFamily = FontFamily.Monospace,
@@ -229,4 +220,36 @@ private fun AssetImage(src: String, alt: String, api: Api?, onRemove: (() -> Uni
         )
     }
     if (open) ImageViewer(src, alt, api, ImageActions(removeFromBlock = onRemove)) { open = false }
+}
+
+/**
+ * A code block with syntax colours. A long one starts folded (Settings →
+ * Code blocks, the web app's defaults): its first lines and a bar to show all.
+ */
+@Composable
+private fun CodeBlock(lang: String, code: String) {
+    val fold = app.blockseq.android.ui.LocalCodeFold.current
+    val lines = code.split('\n')
+    val long = fold.on && lines.size > fold.lines
+    var open by remember(code) { mutableStateOf(false) }
+    val shown = if (long && !open) lines.take(fold.show.coerceIn(1, lines.size - 1)).joinToString("\n") else code
+    val dark = MaterialTheme.colorScheme.background.luminanceApprox() < 0.5f
+    val colors = remember(dark) { codeColors(dark) }
+    val text = remember(shown, lang, dark) { highlight(shown, lang, colors) }
+    Column(Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(6.dp))) {
+        Text(
+            text,
+            fontFamily = FontFamily.Monospace,
+            fontSize = 13.sp,
+            modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(10.dp),
+        )
+        if (long) {
+            Text(
+                if (open) "Fold" else "Show all ${lines.size} lines",
+                color = inlineColors().link,
+                style = MaterialTheme.typography.labelMedium,
+                modifier = Modifier.fillMaxWidth().clickable { open = !open }.padding(horizontal = 10.dp, vertical = 8.dp).testTag("code-fold"),
+            )
+        }
+    }
 }

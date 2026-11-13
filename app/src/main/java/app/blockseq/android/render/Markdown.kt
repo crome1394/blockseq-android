@@ -40,8 +40,9 @@ private fun AnnotatedString.Builder.link(label: String, target: Target, style: S
 }
 
 private val RULES: List<Rule> = listOf(
-    Rule(Regex("`([^`]+)`")) { m, c, _ ->
-        withStyle(SpanStyle(fontFamily = FontFamily.Monospace, color = c.code, background = c.codeBackground)) { append(m.groupValues[1]) }
+    // ``text`` (the web app adds a copy button) and `text`: inline code.
+    Rule(Regex("``(.+?)``|`([^`]+)`")) { m, c, _ ->
+        withStyle(SpanStyle(fontFamily = FontFamily.Monospace, color = c.code, background = c.codeBackground)) { append(m.groupValues[1].ifEmpty { m.groupValues[2] }.trim()) }
     },
     Rule(Regex("""\[\[([^\]]+)\]\]""")) { m, c, tap ->
         link(m.groupValues[1], Target.Page(m.groupValues[1]), SpanStyle(color = c.link), tap)

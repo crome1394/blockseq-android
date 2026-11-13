@@ -100,3 +100,18 @@ class PartsTest {
         assertEquals(app.blockseq.android.render.Part.Image("dog", "../assets/dog.png"), mixed[1])
     }
 }
+
+class HighlightTest {
+    @org.junit.Test
+    fun highlightingKeepsTheTextAndMarksTheParts() {
+        val code = "def f(x): # half\n    return \"x\" * 2"
+        val c = app.blockseq.android.render.codeColors(true)
+        val a = app.blockseq.android.render.highlight(code, "python", c)
+        assertEquals(code, a.text)
+        val colorAt = { i: Int -> a.spanStyles.firstOrNull { i >= it.start && i < it.end }?.item?.color }
+        assertEquals(c.keyword, colorAt(0))
+        assertEquals(c.comment, colorAt(code.indexOf("# half")))
+        assertEquals(c.string, colorAt(code.indexOf("\"x\"")))
+        assertEquals(c.number, colorAt(code.lastIndexOf('2')))
+    }
+}

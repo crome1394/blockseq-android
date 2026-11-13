@@ -35,6 +35,11 @@ class Store(context: Context) {
         get() = prefs.getBoolean("controls_bottom", true)
         set(v) = prefs.edit().putBoolean("controls_bottom", v).apply()
 
+    /** Long code blocks start folded (same settings and defaults as the web app). */
+    var codeFold: CodeFold
+        get() = CodeFold(prefs.getBoolean("code_fold", true), prefs.getInt("code_fold_lines", 20), prefs.getInt("code_fold_show", 6))
+        set(v) = prefs.edit().putBoolean("code_fold", v.on).putInt("code_fold_lines", v.lines).putInt("code_fold_show", v.show).apply()
+
     /** Where the search field sits on the Search tab. */
     var searchAtBottom: Boolean
         get() = prefs.getBoolean("search_bottom", false)
@@ -86,3 +91,6 @@ class Store(context: Context) {
         const val ALIAS = "blockseq-device-token"
     }
 }
+
+/** Folding long code blocks: on/off, "long" means more than [lines], [show] lines stay visible. */
+data class CodeFold(val on: Boolean = true, val lines: Int = 20, val show: Int = 6)
