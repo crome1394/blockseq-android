@@ -55,5 +55,8 @@ dependencies {
     implementation(libs.okhttp.sse)
     implementation(libs.serialization.json)
     implementation(libs.coroutines.android)
+    implementation(libs.camera.camera2)
+    implementation(libs.camera.lifecycle)
+    implementation(libs.camera.view)
     testImplementation(libs.junit)
 }

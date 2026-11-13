@@ -162,11 +162,18 @@ fun PageScreen(model: AppModel, name: String, onOpen: (String) -> Unit, onBack: 
         val f = cameraFile
         if (ok && f != null) insertPicture(FileProvider.getUriForFile(context, "${context.packageName}.files", f)) else f?.delete()
     }
+    var builtInCamera by remember { mutableStateOf(false) }
     fun openCamera() {
         val dir = File(context.cacheDir, "camera").apply { mkdirs() }
         val f = File(dir, "photo_${System.currentTimeMillis()}.jpg")
         cameraFile = f
-        takePhoto.launch(FileProvider.getUriForFile(context, "${context.packageName}.files", f))
+        // Some camera apps do not take "capture a photo" requests (this crashed
+        // before); the app's own camera stands in for them.
+        try {
+            takePhoto.launch(FileProvider.getUriForFile(context, "${context.packageName}.files", f))
+        } catch (e: android.content.ActivityNotFoundException) {
+            builtInCamera = true
+        }
     }
     fun choosePhoto() = pickPhoto.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
 
@@ -297,6 +304,13 @@ fun PageScreen(model: AppModel, name: String, onOpen: (String) -> Unit, onBack: 
         }
     }
     if (unlocking) UnlockDialog(model) { unlocking = false }
+    val shot = cameraFile
+    if (builtInCamera && shot != null) {
+        CameraScreen(shot) { taken ->
+            builtInCamera = false
+            if (taken) insertPicture(FileProvider.getUriForFile(context, "${context.packageName}.files", shot)) else shot.delete()
+        }
+    }
 }
 
 @Composable
