@@ -151,7 +151,8 @@ fun PageScreen(model: AppModel, name: String, onOpen: (String) -> Unit, quickNot
             try {
                 val (bytes, fileName, mime) = withContext(Dispatchers.IO) { readPicture(context, uri) }
                 val path = api.uploadAsset(bytes, fileName, mime)
-                val md = "![${fileName.substringBeforeLast('.')}]($path)"
+                // Quarter size in the web app (a phone photo at full size fills the screen there).
+                val md = "![${fileName.substringBeforeLast('.')}]($path){:size \"quarter\"}"
                 val target = editing
                 if (target != null) {
                     val sel = field.selection

@@ -82,7 +82,7 @@ ignored.
   toolbar): *Take a photo* (the system camera writes into the app cache, no
   camera permission) or *Choose from phone* (the system photo picker, no
   storage permission). The original file is uploaded with
-  `POST /api/assets` and its Markdown goes at the cursor of the block being
+  `POST /api/assets` and its Markdown (with `{:size "quarter"}`, the web app's quarter size) goes at the cursor of the block being
   edited, or into a new block at the end.
 
 ## Reading and tagging

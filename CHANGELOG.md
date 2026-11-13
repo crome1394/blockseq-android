@@ -9,6 +9,7 @@ The first version. Needs a Blockseq server with device pairing.
 
 ### Added
 
+- Pictures added from the phone (camera or gallery) are set to quarter size (`{:size "quarter"}`), so they show at a quarter of their width in the web app.
 - Scratchpad notes are stamped with the date only (`[[Nov 12th, 2026]] …`); the widget still shows the time of older notes that have one.
 - ``code`` (double graves) has a copy button after it, as in the web app.
 - Opening the app sends Scratchpad notes still waiting (Android can hold the widget's retry back for minutes). (`c38769b`)
