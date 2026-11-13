@@ -19,6 +19,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.unit.dp
@@ -66,10 +68,11 @@ fun TagDialog(model: AppModel, blockText: String, onPick: (String) -> Unit, onCl
                         )
                     }
                     items(shown, key = { it }) { tag ->
-                        Text(
-                            "#$tag", color = inlineColors().tag,
-                            modifier = Modifier.fillMaxWidth().clickable { onPick(tag) }.padding(vertical = 12.dp),
-                        )
+                        // Each tag in its own colour, as in pages (the web app's tagHue).
+                        val (fg, bg) = app.blockseq.android.render.tagColors(tag, androidx.compose.foundation.isSystemInDarkTheme())
+                        Box(Modifier.fillMaxWidth().clickable { onPick(tag) }.padding(vertical = 7.dp)) {
+                            Text("#$tag", color = fg, modifier = Modifier.background(bg, androidx.compose.foundation.shape.RoundedCornerShape(6.dp)).padding(horizontal = 8.dp, vertical = 4.dp))
+                        }
                     }
                 }
             }
