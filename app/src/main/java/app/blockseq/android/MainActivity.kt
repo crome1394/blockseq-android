@@ -43,10 +43,13 @@ class MainActivity : ComponentActivity() {
                         val nav = rememberNavController()
                         val open: (String) -> Unit = { name -> nav.navigate("page/" + Uri.encode(name)) }
                         NavHost(nav, startDestination = "home") {
-                            composable("home") { HomeScreen(model, open) { nav.navigate("settings") } }
-                            composable("page/{name}") { entry ->
+                            composable("home") {
+                                HomeScreen(model, open, onSettings = { nav.navigate("settings") }, onQuickNote = { name -> nav.navigate("page/" + Uri.encode(name) + "?note=true") })
+                            }
+                            composable("page/{name}?note={note}") { entry ->
                                 val name = Uri.decode(entry.arguments?.getString("name") ?: "")
-                                PageScreen(model, name, open) { nav.popBackStack() }
+                                val note = entry.arguments?.getString("note") == "true"
+                                PageScreen(model, name, open, quickNote = note) { nav.popBackStack() }
                             }
                             composable("settings") { SettingsScreen(model) { nav.popBackStack() } }
                         }

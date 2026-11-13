@@ -22,6 +22,10 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.foundation.layout.Box
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
@@ -82,7 +86,7 @@ private enum class Tab(val label: String, val icon: androidx.compose.ui.graphics
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HomeScreen(model: AppModel, onOpen: (String) -> Unit, onSettings: () -> Unit) {
+fun HomeScreen(model: AppModel, onOpen: (String) -> Unit, onSettings: () -> Unit, onQuickNote: (String) -> Unit) {
     var tab by rememberSaveable { mutableStateOf(Tab.Journals) }
     // Bumped by live updates from other devices, so lists reload.
     var changes by remember { mutableIntStateOf(0) }
@@ -92,6 +96,8 @@ fun HomeScreen(model: AppModel, onOpen: (String) -> Unit, onSettings: () -> Unit
             if (ev["client"]?.toString()?.trim('"') != api.clientId) changes++
         }
     }
+    var creating by remember { mutableStateOf(false) }
+    if (creating) NewPageDialog(model, onDone = { name -> creating = false; name?.let(onOpen) })
     val drawer = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     ModalNavigationDrawer(
@@ -107,6 +113,14 @@ fun HomeScreen(model: AppModel, onOpen: (String) -> Unit, onSettings: () -> Unit
                 navigationIcon = { IconButton(onClick = { scope.launch { drawer.open() } }, modifier = Modifier.testTag("menu")) { Icon(Icons.Filled.Menu, "Menu") } },
                 actions = { IconButton(onClick = onSettings, modifier = Modifier.testTag("settings")) { Icon(Icons.Filled.Settings, "Settings") } },
             )
+        },
+        floatingActionButton = {
+            when (tab) {
+                // Pages: a new page or tag. Journals: a quick note on today's journal.
+                Tab.Pages -> FloatingActionButton(onClick = { creating = true }, modifier = Modifier.testTag("fab-new")) { Icon(Icons.Filled.Add, "New page or tag") }
+                Tab.Journals -> FloatingActionButton(onClick = { onQuickNote(journalName(LocalDate.now())) }, modifier = Modifier.testTag("fab-note")) { Icon(Icons.Filled.Edit, "Quick note on today's journal") }
+                else -> {}
+            }
         },
         bottomBar = {
             NavigationBar {
@@ -270,8 +284,14 @@ private fun JournalCard(name: String, blocks: List<app.blockseq.android.outline.
 private fun PagesTab(model: AppModel, key: String, onOpen: (String) -> Unit) {
     val api = model.api ?: return
     var filter by rememberSaveable { mutableStateOf("") }
-    Column {
-        OutlinedTextField(filter, { filter = it }, label = { Text("Filter pages") }, singleLine = true, modifier = Modifier.fillMaxWidth().padding(12.dp))
+    // Settings → Search and filter fields: top or bottom, like the Search tab.
+    val atBottom = model.store.searchAtBottom
+    val field = @Composable {
+        OutlinedTextField(filter, { filter = it }, label = { Text("Filter pages") }, singleLine = true, modifier = Modifier.fillMaxWidth().padding(12.dp).testTag("filter"))
+    }
+    Column(Modifier.fillMaxSize().then(if (atBottom) Modifier.imePadding() else Modifier)) {
+        if (!atBottom) field()
+        Box(Modifier.weight(1f)) {
         Loader(model, key, { api.pages().filter { it.journalDay == null } }) { pages: List<PageSummary> ->
             val shown = pages.filter { filter.isBlank() || it.name.contains(filter.trim(), ignoreCase = true) }
                 .sortedWith(compareByDescending<PageSummary> { it.favorite }.thenByDescending { it.updatedAt })
@@ -288,6 +308,8 @@ private fun PagesTab(model: AppModel, key: String, onOpen: (String) -> Unit) {
                 }
             }
         }
+            }
+        if (atBottom) field()
     }
 }
 
@@ -419,4 +441,37 @@ private fun step(
         }
         refresh()
     }
+}
+
+/** The Pages tab's + button: a new page, or a tag (a tag is a page others link to with #name). */
+@Composable
+private fun NewPageDialog(model: AppModel, onDone: (String?) -> Unit) {
+    var name by remember { mutableStateOf("") }
+    var error by remember { mutableStateOf<String?>(null) }
+    val scope = rememberCoroutineScope()
+    fun create(asTag: Boolean) {
+        val n = name.trim().removePrefix("#").removePrefix("[[").removeSuffix("]]").trim()
+        if (n.isEmpty()) return
+        scope.launch {
+            runCatching { model.api?.ensurePage(n) }
+                .onSuccess { onDone(n) }
+                .onFailure { error = it.message; model.handle(it) }
+        }
+    }
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = { onDone(null) },
+        title = { Text("New page or tag") },
+        text = {
+            Column {
+                OutlinedTextField(name, { name = it }, singleLine = true, label = { Text("Name") }, modifier = Modifier.fillMaxWidth().testTag("new-name"))
+                Text(
+                    "A tag is a page too: #name in any block links to it. An empty page goes away again if nothing is written on it or links to it.",
+                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 8.dp),
+                )
+                error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+            }
+        },
+        confirmButton = { androidx.compose.material3.TextButton(enabled = name.isNotBlank(), onClick = { create(false) }) { Text("Create page") } },
+        dismissButton = { androidx.compose.material3.TextButton(enabled = name.isNotBlank(), onClick = { create(true) }) { Text("Create tag") } },
+    )
 }

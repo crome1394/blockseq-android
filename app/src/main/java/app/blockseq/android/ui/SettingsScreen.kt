@@ -83,7 +83,7 @@ fun SettingsScreen(model: AppModel, onBack: () -> Unit) {
                 NumberSetting("Lines to show when folded", fold.show, 1..200) { model.changeCodeFold(fold.copy(show = it)) }
             }
             HorizontalDivider()
-            Section("Search field")
+            Section("Search and filter fields")
             var bottom by remember { mutableStateOf(model.store.searchAtBottom) }
             listOf(false to "Top", true to "Bottom (easier to reach with one hand)").forEach { (value, label) ->
                 Row(Modifier.fillMaxWidth().clickable { bottom = value; model.store.searchAtBottom = value }.testTag("search-${if (value) "bottom" else "top"}"), verticalAlignment = Alignment.CenterVertically) {

@@ -128,6 +128,12 @@ class Api(private val base: String, private val token: String?, val workbook: St
     suspend fun journals(before: Long? = null, limit: Int = 10): List<JournalPage> =
         get(url("/api/journals", "before" to before?.toString(), "limit" to limit.toString()))
     suspend fun pages(): List<PageSummary> = get(url("/api/pages"))
+    /** Creates an empty page (or tag page) if it does not exist yet. */
+    suspend fun ensurePage(name: String) {
+        val (code, text) = call(request(url("/api/page/ensure", "name" to name)).post(ByteArray(0).toRequestBody(null)).build())
+        if (code !in 200..299) fail(code, text)
+    }
+
     /** The page a block lives on (for ((block references))). */
     suspend fun blockPage(id: String): String = get<BlockHit>(url("/api/block", "id" to id)).pageName
     suspend fun search(q: String): SearchResults = get(url("/api/search", "q" to q, "limit" to "50"))
