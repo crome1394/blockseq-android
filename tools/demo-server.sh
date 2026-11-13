@@ -11,6 +11,12 @@ PORT=3970
 DIR="$(mktemp -d -t blockseq-demo-XXXXXX)"
 (BLOCKSEQ_DATA="$DIR" BLOCKSEQ_ADDR="127.0.0.1:$PORT" BLOCKSEQ_PASSWORD=demo-server nohup "$BIN" >"$DIR/server.log" 2>&1 &)
 for _ in $(seq 40); do curl -sf "http://127.0.0.1:$PORT/api/health" >/dev/null && break; sleep 0.25; done
-deno run -A "$(dirname "$0")/seed.ts" "http://127.0.0.1:$PORT" demo-server demo-secret
+# A made-up photo (a coloured gradient), so pictures can be tested.
+python3 -c "
+from PIL import Image
+im = Image.new('RGB', (1600, 1200))
+im.putdata([(x * 255 // 1600, y * 255 // 1200, 140) for y in range(1200) for x in range(1600)])
+im.save('$DIR/photo.jpg', quality=85)" 2>/dev/null || true
+deno run -A "$(dirname "$0")/seed.ts" "http://127.0.0.1:$PORT" demo-server demo-secret "$( [ -f "$DIR/photo.jpg" ] && echo "$DIR/photo.jpg" )"
 adb reverse tcp:$PORT tcp:$PORT >/dev/null
 echo "Demo server on http://localhost:$PORT (data: $DIR). Stop it: kill \$(ss -ltnp | grep ':$PORT ' | grep -o 'pid=[0-9]*' | cut -d= -f2)"

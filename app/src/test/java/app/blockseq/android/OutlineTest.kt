@@ -89,3 +89,14 @@ class EnterTest {
         assertEquals(false, app.blockseq.android.ui.insideFence(t, 6))
     }
 }
+
+class PartsTest {
+    @org.junit.Test
+    fun picturesAreFoundAloneAndInsideText() {
+        val alone = app.blockseq.android.render.parts("![cat](../assets/cat.jpg){:width 600}")
+        assertEquals(listOf(app.blockseq.android.render.Part.Image("cat", "../assets/cat.jpg")), alone)
+        val mixed = app.blockseq.android.render.parts("Look ![dog](../assets/dog.png) here")
+        assertEquals(3, mixed.size)
+        assertEquals(app.blockseq.android.render.Part.Image("dog", "../assets/dog.png"), mixed[1])
+    }
+}

@@ -295,6 +295,22 @@ class PageEditor(
         changed()
     }
 
+    /** Takes a picture's Markdown out of a block (the file stays on the server). */
+    fun removeImage(n: Node, src: String) {
+        val re = Regex("""!\[[^\]\n]*\]\(""" + Regex.escape(src) + """\)(?:\{[^}\n]*\})?""")
+        val next = re.replace(n.content, "").replace(Regex("[ \t]+\n"), "\n").trim()
+        setText(n, next)
+    }
+
+    /** A new block at the end of the page holding [text] (a picture just added). */
+    fun appendWith(text: String): Node {
+        val last = root.children.lastOrNull()
+        val n = if (last != null && last.content.isBlank() && last.children.isEmpty()) last else appendBlock()
+        n.content = text
+        changed()
+        return n
+    }
+
     fun cycleStatus(n: Node) {
         n.content = statuses.with(n.content, statuses.next(statuses.of(n.content)?.word))
         changed()

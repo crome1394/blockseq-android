@@ -109,6 +109,7 @@ sealed interface Part {
 }
 
 private val IMAGE = Regex("""^!\[([^\]\n]*)\]\(([^)\s]+)\)(?:\{[^}\n]*\})?\s*$""")
+private val INLINE_IMAGE = Regex("""!\[([^\]\n]*)\]\(([^)\s]+)\)(?:\{[^}\n]*\})?""")
 private val HEADING = Regex("^(#{1,6}) (.*)$")
 private val ADMONITION = Regex("""^#\+BEGIN_(\w+)\s*$""", RegexOption.IGNORE_CASE)
 
@@ -181,6 +182,19 @@ fun parts(content: String): List<Part> {
             line.startsWith("> ") -> {
                 flush()
                 out += Part.Text(line.removePrefix("> "), quote = true)
+            }
+            INLINE_IMAGE.containsMatchIn(line) -> {
+                // A picture in the middle of a line: the text around it stays.
+                var rest = line
+                while (true) {
+                    val m = INLINE_IMAGE.find(rest) ?: break
+                    val before = rest.substring(0, m.range.first)
+                    if (before.isNotBlank()) para += before
+                    flush()
+                    out += Part.Image(m.groupValues[1], m.groupValues[2])
+                    rest = rest.substring(m.range.last + 1)
+                }
+                if (rest.isNotBlank()) para += rest
             }
             else -> para += line
         }

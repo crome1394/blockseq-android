@@ -185,6 +185,26 @@ class Api(private val base: String, private val token: String?, val workbook: St
         awaitClose { source.cancel() }
     }
 
+    /**
+     * Uploads a file (a photo) to the workbook's assets. Returns the path to
+     * put in the block text, e.g. `../assets/photo_1731_0.jpg`.
+     */
+    suspend fun uploadAsset(bytes: ByteArray, fileName: String, mime: String): String {
+        val req = request(url("/api/assets"))
+            .header("X-Filename", fileName)
+            .post(bytes.toRequestBody(mime.toMediaType()))
+            .build()
+        val (code, text) = call(req)
+        if (code !in 200..299) fail(code, text)
+        return (json.parseToJsonElement(text) as JsonObject)["path"]!!.jsonPrimitive.content
+    }
+
+    /** Deletes an uploaded file from the server (every block that shows it loses the picture). */
+    suspend fun deleteAsset(name: String) {
+        val (code, text) = call(request(url("/api/assets", "name" to name)).delete().build())
+        if (code !in 200..299 && code != 404) fail(code, text)
+    }
+
     /** An uploaded file (image) with this phone's token, as bytes. */
     suspend fun asset(path: String): ByteArray? = withContext(Dispatchers.IO) {
         val name = path.substringAfterLast("/")

@@ -1,6 +1,5 @@
 package app.blockseq.android.render
 
-import android.graphics.BitmapFactory
 import android.util.LruCache
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -25,9 +24,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -94,7 +94,16 @@ private val TASK_TAG = Regex("""(^|\s+)#task(?=\s|$)""", RegexOption.IGNORE_CASE
  * the badge is not tappable).
  */
 @Composable
-fun BlockContent(content: String, statuses: Statuses, api: Api?, onTap: (Target) -> Unit, onStatusTap: (() -> Unit)?, modifier: Modifier = Modifier) {
+fun BlockContent(
+    content: String,
+    statuses: Statuses,
+    api: Api?,
+    onTap: (Target) -> Unit,
+    onStatusTap: (() -> Unit)?,
+    modifier: Modifier = Modifier,
+    /** Takes a picture out of this block (the picture viewer offers it); null: not offered. */
+    onRemoveImage: ((src: String) -> Unit)? = null,
+) {
     val st = statuses.of(content)
     var body = if (st != null) statuses.strip(content) else content
     if (st != null) body = TASK_TAG.replaceFirst(body, "")
@@ -145,7 +154,7 @@ fun BlockContent(content: String, statuses: Statuses, api: Api?, onTap: (Target)
                 ) {
                     Text(inlineMarkdown(part.text, colors, onTap), color = MaterialTheme.colorScheme.onSecondaryContainer)
                 }
-                is Part.Image -> AssetImage(part.src, part.alt, api)
+                is Part.Image -> AssetImage(part.src, part.alt, api, onRemoveImage?.let { remove -> { remove(part.src) } })
             }
         }
         if (list.isEmpty() && st != null) Row { StatusBadge(st, onStatusTap) }
@@ -178,33 +187,46 @@ private val imageCache = object : LruCache<String, ImageBitmap>(24 * 1024 * 1024
     override fun sizeOf(key: String, value: ImageBitmap) = value.width * value.height * 4
 }
 
-/** An uploaded image (../assets/…), fetched with this phone's token and scaled down. */
+fun imageCacheRemove(src: String) { imageCache.remove(src) }
+
+/**
+ * An uploaded picture (../assets/…) as a thumbnail: at most 220 dp tall,
+ * whatever size the block asks for. Tap to open it full screen.
+ */
 @Composable
-private fun AssetImage(src: String, alt: String, api: Api?) {
+private fun AssetImage(src: String, alt: String, api: Api?, onRemove: (() -> Unit)?) {
     if (!src.contains("assets/") || api == null) {
         Text("🖼 $alt", color = MaterialTheme.colorScheme.onSurfaceVariant)
         return
     }
     var image by remember(src) { mutableStateOf(imageCache.get(src)) }
+    var open by remember { mutableStateOf(false) }
     LaunchedEffect(src) {
         if (image != null) return@LaunchedEffect
         val bytes = runCatching { api.asset(src) }.getOrNull() ?: return@LaunchedEffect
-        val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-        BitmapFactory.decodeByteArray(bytes, 0, bytes.size, bounds)
-        var sample = 1
-        while (bounds.outWidth / sample > 1600) sample *= 2
-        val bmp = BitmapFactory.decodeByteArray(bytes, 0, bytes.size, BitmapFactory.Options().apply { inSampleSize = sample }) ?: return@LaunchedEffect
-        image = bmp.asImageBitmap().also { imageCache.put(src, it) }
+        val bmp = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) { decodeScaled(bytes, 800) } ?: return@LaunchedEffect
+        image = bmp.also { imageCache.put(src, it) }
     }
     val img = image
     if (img == null) {
-        Text("🖼 ${alt.ifEmpty { "image" }}", color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Box(
+            Modifier.fillMaxWidth().heightIn(min = 120.dp, max = 220.dp)
+                .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(8.dp))
+                .clickable { open = true },
+            contentAlignment = androidx.compose.ui.Alignment.Center,
+        ) { Text("🖼 ${alt.ifEmpty { "picture" }}", color = MaterialTheme.colorScheme.onSurfaceVariant) }
     } else {
         androidx.compose.foundation.Image(
             img,
             contentDescription = alt,
-            contentScale = ContentScale.FillWidth,
-            modifier = Modifier.fillMaxWidth().heightIn(max = 480.dp),
+            contentScale = ContentScale.Fit,
+            alignment = androidx.compose.ui.Alignment.CenterStart,
+            modifier = Modifier
+                .heightIn(max = 220.dp)
+                .clip(RoundedCornerShape(8.dp))
+                .clickable { open = true }
+                .testTag("picture"),
         )
     }
+    if (open) ImageViewer(src, alt, api, ImageActions(removeFromBlock = onRemove)) { open = false }
 }

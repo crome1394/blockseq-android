@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Temporary files only: photos being shared, and photos the camera takes
+     before they are uploaded. Both live in the app's cache. -->
+<paths>
+    <cache-path name="shared" path="shared/" />
+    <cache-path name="camera" path="camera/" />
+</paths>

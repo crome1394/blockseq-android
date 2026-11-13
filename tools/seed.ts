@@ -2,7 +2,7 @@
 // pages, journals, tasks, and an #Encrypted block (encrypted exactly as the
 // web app does, see web/js/crypto.js in the server repo).
 //
-//   deno run -A tools/seed.ts http://127.0.0.1:3970 <server password> <encryption password>
+//   deno run -A tools/seed.ts http://127.0.0.1:3970 <server password> <encryption password> [photo.jpg]
 const [BASE, SERVER_PW, ENC_PW] = Deno.args;
 const auth = { authorization: "Basic " + btoa("seed:" + SERVER_PW) };
 const enc = new TextEncoder();
@@ -75,6 +75,17 @@ await page("Garden plan", [
 ]);
 await page("Climbing beans", [[0, "Pole varieties against the south fence #gardening"], [0, "IN-REVIEW Compare last year's yields #task"]]);
 await page("Reading list", [[0, "DOING *The Overstory* #task"], [0, "BACKLOG A field guide to garden birds #task"]]);
-await page(journal(0), [[0, "Morning walk, then planning the beds. See [[Garden plan]]."], [0, "TODO Pick up stakes and twine #task"]]);
+// A picture (made by demo-server.sh), uploaded like the web app does.
+let picture = "";
+const photo = Deno.args[3];
+if (photo) {
+  const r = await fetch(BASE + "/api/assets", { method: "POST", headers: { ...auth, "x-filename": "garden-photo.jpg" }, body: await Deno.readFile(photo) });
+  picture = (await r.json()).path;
+}
+await page(journal(0), [
+  [0, "Morning walk, then planning the beds. See [[Garden plan]]."],
+  [0, "TODO Pick up stakes and twine #task"],
+  ...(picture ? [[0, `The beds this morning ![garden-photo](${picture}){:width 1200}`] as [number, string]] : []),
+]);
 await page(journal(1), [[0, "Swapped the router firmware; all good."], [0, "DONE Sharpen the pruning shears #task"]]);
 console.log("seeded");

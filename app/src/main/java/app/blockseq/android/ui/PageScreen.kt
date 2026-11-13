@@ -1,6 +1,8 @@
 package app.blockseq.android.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -56,6 +58,19 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.platform.LocalContext
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.FileProvider
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material.icons.filled.AddAPhoto
+import androidx.compose.material.icons.filled.PhotoCamera
+import androidx.compose.material.icons.filled.PhotoLibrary
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import java.io.File
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
@@ -112,6 +127,49 @@ fun PageScreen(model: AppModel, name: String, onOpen: (String) -> Unit, onBack: 
         scope.launch { editor.save() }
     }
 
+    // Pictures from the phone: uploaded to the workbook's assets, then put at
+    // the cursor of the block being edited, or in a new block at the end.
+    val context = LocalContext.current
+    var uploading by remember { mutableStateOf(false) }
+    var cameraFile by remember { mutableStateOf<File?>(null) }
+    fun insertPicture(uri: android.net.Uri) {
+        uploading = true
+        scope.launch {
+            try {
+                val (bytes, fileName, mime) = withContext(Dispatchers.IO) { readPicture(context, uri) }
+                val path = api.uploadAsset(bytes, fileName, mime)
+                val md = "![${fileName.substringBeforeLast('.')}]($path)"
+                val target = editing
+                if (target != null) {
+                    val sel = field.selection
+                    val t = field.text.substring(0, sel.start) + md + field.text.substring(sel.end)
+                    field = TextFieldValue(t, TextRange(sel.start + md.length))
+                    editor.setText(target, t)
+                } else {
+                    editor.appendWith(md)
+                }
+            } catch (e: Exception) {
+                model.handle(e)
+                editor.error = "Could not add the picture: ${e.message}"
+            } finally {
+                uploading = false
+                cameraFile?.delete()
+            }
+        }
+    }
+    val pickPhoto = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri -> uri?.let(::insertPicture) }
+    val takePhoto = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { ok ->
+        val f = cameraFile
+        if (ok && f != null) insertPicture(FileProvider.getUriForFile(context, "${context.packageName}.files", f)) else f?.delete()
+    }
+    fun openCamera() {
+        val dir = File(context.cacheDir, "camera").apply { mkdirs() }
+        val f = File(dir, "photo_${System.currentTimeMillis()}.jpg")
+        cameraFile = f
+        takePhoto.launch(FileProvider.getUriForFile(context, "${context.packageName}.files", f))
+    }
+    fun choosePhoto() = pickPhoto.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -119,6 +177,7 @@ fun PageScreen(model: AppModel, name: String, onOpen: (String) -> Unit, onBack: 
                     Column {
                         Text(name, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         val status = when {
+                            uploading -> "Uploading picture…"
                             editor.conflict != null -> "Choose a version"
                             editor.error != null -> editor.error!!
                             editor.saving || editor.dirty -> "Saving…"
@@ -130,6 +189,7 @@ fun PageScreen(model: AppModel, name: String, onOpen: (String) -> Unit, onBack: 
                 },
                 navigationIcon = { IconButton(onClick = { stopEdit(); onBack() }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") } },
                 actions = {
+                    PictureButton(onCamera = ::openCamera, onGallery = ::choosePhoto, tag = "page-picture")
                     if (model.setup != null) {
                         if (model.key == null) IconButton(onClick = { unlocking = true }) { Icon(Icons.Filled.Lock, "Unlock encrypted blocks") }
                         else IconButton(onClick = { stopEdit(); model.lock() }) { Icon(Icons.Filled.LockOpen, "Lock encrypted blocks") }
@@ -156,6 +216,7 @@ fun PageScreen(model: AppModel, name: String, onOpen: (String) -> Unit, onBack: 
                         if (above != null) startEdit(above) else stopEdit()
                     },
                     onDone = { stopEdit() },
+                    picture = { PictureButton(onCamera = ::openCamera, onGallery = ::choosePhoto, tag = "edit-picture") },
                 )
             }
         },
@@ -211,7 +272,7 @@ fun PageScreen(model: AppModel, name: String, onOpen: (String) -> Unit, onBack: 
                                 } else if (n.content.isBlank()) {
                                     Text(" ", style = MaterialTheme.typography.bodyLarge)
                                 } else {
-                                    BlockContent(n.content, model.statuses, api, onTap, { editor.cycleStatus(n) })
+                                    BlockContent(n.content, model.statuses, api, onTap, { editor.cycleStatus(n) }, onRemoveImage = { src -> editor.removeImage(n, src) })
                                 }
                             }
                         }
@@ -263,16 +324,21 @@ private fun TextButtonRow(label: String, onClick: () -> Unit) {
 private fun EditBar(
     onOutdent: () -> Unit, onIndent: () -> Unit, onUp: () -> Unit, onDown: () -> Unit,
     onStatus: () -> Unit, onLineBreak: () -> Unit, onDelete: () -> Unit, onDone: () -> Unit,
+    picture: @Composable () -> Unit,
 ) {
     Surface(tonalElevation = 3.dp, modifier = Modifier.imePadding()) {
-        Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp), horizontalArrangement = Arrangement.SpaceBetween) {
+        // Nine buttons are wider than a phone: these scroll sideways, Done stays put on the right.
+        Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+          Row(Modifier.weight(1f).horizontalScroll(rememberScrollState())) {
             IconButton(onClick = onOutdent) { Icon(Icons.AutoMirrored.Filled.FormatIndentDecrease, "Outdent") }
             IconButton(onClick = onIndent) { Icon(Icons.AutoMirrored.Filled.FormatIndentIncrease, "Indent") }
             IconButton(onClick = onUp) { Icon(Icons.Filled.ArrowUpward, "Move up") }
             IconButton(onClick = onDown) { Icon(Icons.Filled.ArrowDownward, "Move down") }
             IconButton(onClick = onStatus) { Icon(Icons.Filled.CheckBox, "Next task status") }
             IconButton(onClick = onLineBreak) { Icon(Icons.Filled.KeyboardReturn, "New line in this block") }
+            picture()
             IconButton(onClick = onDelete) { Icon(Icons.Filled.Delete, "Delete block") }
+          }
             IconButton(onClick = onDone, modifier = Modifier.testTag("done")) { Icon(Icons.Filled.Check, "Done") }
         }
     }
@@ -315,3 +381,30 @@ internal fun newlineTyped(old: String, new: String): Int? {
 /** The position is inside a ``` code fence that is still open there. */
 internal fun insideFence(text: String, at: Int): Boolean =
     text.substring(0, at).lines().count { it.trimStart().startsWith("```") } % 2 == 1
+
+/** A camera icon that offers: take a photo, or choose one from the phone. */
+@Composable
+private fun PictureButton(onCamera: () -> Unit, onGallery: () -> Unit, tag: String) {
+    var open by remember { mutableStateOf(false) }
+    Box {
+        IconButton(onClick = { open = true }, modifier = Modifier.testTag(tag)) { Icon(Icons.Filled.AddAPhoto, "Add a picture") }
+        DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+            DropdownMenuItem(text = { Text("Take a photo") }, leadingIcon = { Icon(Icons.Filled.PhotoCamera, null) }, onClick = { open = false; onCamera() })
+            DropdownMenuItem(text = { Text("Choose from phone") }, leadingIcon = { Icon(Icons.Filled.PhotoLibrary, null) }, onClick = { open = false; onGallery() })
+        }
+    }
+}
+
+/** A picture's bytes, file name and type from a content uri (camera or photo picker). */
+private fun readPicture(context: android.content.Context, uri: android.net.Uri): Triple<ByteArray, String, String> {
+    val resolver = context.contentResolver
+    val mime = resolver.getType(uri) ?: "image/jpeg"
+    var name: String? = null
+    resolver.query(uri, arrayOf(android.provider.OpenableColumns.DISPLAY_NAME), null, null, null)?.use { c ->
+        if (c.moveToFirst()) name = c.getString(0)
+    }
+    val ext = android.webkit.MimeTypeMap.getSingleton().getExtensionFromMimeType(mime) ?: "jpg"
+    val fileName = name?.takeIf { it.contains('.') } ?: "photo_${System.currentTimeMillis()}.$ext"
+    val bytes = resolver.openInputStream(uri)!!.use { it.readBytes() }
+    return Triple(bytes, fileName, mime)
+}
