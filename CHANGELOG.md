@@ -9,6 +9,7 @@ The first version. Needs a Blockseq server with device pairing.
 
 ### Added
 
+- Search: tags have a tag symbol.
 - Widget notes: the day's first note gets a date row above it (`[[Nov 13th, 2026]]`); later notes that day go in without a stamp. The widget uses the date rows as day headings (older stamped notes still group by their stamp).
 - The widget's padlock is coloured like the app's: amber while locked, green while the app has encrypted blocks unlocked. (The widget still never decrypts.)
 - Tasks: a + button opens a card to write a task, pick its status (in its colour) and add a due date; it goes on the last row of today's journal. A due date is written as `📅 [[Nov 20th, 2026]]`, so the task also shows on that day. Each task group has a calendar or page symbol.

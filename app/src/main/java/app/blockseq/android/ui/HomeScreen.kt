@@ -60,6 +60,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.material.icons.filled.Tag
 import androidx.compose.material.icons.automirrored.filled.Article
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.rememberScrollState
@@ -435,6 +436,9 @@ private fun SearchTab(model: AppModel, onOpen: (String) -> Unit) {
     val api = model.api ?: return
     var q by rememberSaveable { mutableStateOf("") }
     var results by remember { mutableStateOf(SearchResults()) }
+    // Tag names (lower case), so tag pages in the results get a tag symbol.
+    var tagNames by remember { mutableStateOf<Set<String>>(emptySet()) }
+    LaunchedEffect(api) { runCatching { api.pages() }.onSuccess { ps -> tagNames = ps.flatMap { it.tags }.map { it.lowercase() }.toSet() } }
     val onTap = linkHandler(model, onOpen)
     LaunchedEffect(q) {
         if (q.isBlank()) { results = SearchResults(); return@LaunchedEffect }
@@ -451,7 +455,7 @@ private fun SearchTab(model: AppModel, onOpen: (String) -> Unit) {
         LazyColumn(Modifier.weight(1f), reverseLayout = false) {
             items(results.pages, key = { "p:$it" }) { name ->
                 Row(Modifier.fillMaxWidth().clickable { onOpen(name) }.padding(horizontal = 16.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-                    PageIcon(name, Modifier.padding(end = 10.dp).size(22.dp))
+                    PageIcon(name, Modifier.padding(end = 10.dp).size(22.dp), tag = name.lowercase() in tagNames)
                     Text(name, color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.bodyLarge)
                 }
             }
@@ -681,10 +685,10 @@ private fun QuickNoteSheet(model: AppModel, onOpenDay: () -> Unit, onDone: (adde
 
 /** A calendar for a journal day, a page symbol for any other page (as in linked references). */
 @Composable
-fun PageIcon(name: String, modifier: Modifier = Modifier) {
+fun PageIcon(name: String, modifier: Modifier = Modifier, tag: Boolean = false) {
     Icon(
-        if (isJournalName(name)) Icons.Filled.CalendarMonth else Icons.AutoMirrored.Filled.Article,
-        if (isJournalName(name)) "Journal" else "Page",
+        when { isJournalName(name) -> Icons.Filled.CalendarMonth; tag -> Icons.Filled.Tag; else -> Icons.AutoMirrored.Filled.Article },
+        when { isJournalName(name) -> "Journal"; tag -> "Tag"; else -> "Page" },
         tint = app.blockseq.android.render.inlineColors().link, modifier = modifier,
     )
 }
