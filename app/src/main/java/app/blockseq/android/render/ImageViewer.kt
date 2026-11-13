@@ -106,7 +106,12 @@ fun ImageViewer(src: String, alt: String, api: Api, actions: ImageActions, onClo
                 failed -> Text("Could not load this picture.", color = Color.White, modifier = Modifier.align(Alignment.Center))
                 else -> CircularProgressIndicator(Modifier.align(Alignment.Center))
             }
-            Row(Modifier.fillMaxWidth().safeDrawingPadding().background(Color(0x66000000)), verticalAlignment = Alignment.CenterVertically) {
+            val bottom = app.blockseq.android.ui.LocalControlsAtBottom.current
+            Row(
+                Modifier.fillMaxWidth().align(if (bottom) Alignment.BottomCenter else Alignment.TopCenter)
+                    .background(Color(0x99000000)).safeDrawingPadding(),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
                 IconButton(onClick = onClose) { Icon(Icons.Filled.Close, "Close", tint = Color.White) }
                 Text(name, color = Color.White, maxLines = 1, modifier = Modifier.weight(1f))
                 IconButton(enabled = bytes != null, onClick = { bytes?.let { share(context, it, name) } }, modifier = Modifier.testTag("image-share")) {

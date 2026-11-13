@@ -70,6 +70,9 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.withLock
 import java.time.LocalDate
 
+/** Starred pages: bright yellow, in light and dark. */
+private val STAR_YELLOW = androidx.compose.ui.graphics.Color(0xFFFFD600)
+
 private enum class Tab(val label: String, val icon: androidx.compose.ui.graphics.vector.ImageVector) {
     Journals("Journals", Icons.Filled.CalendarToday),
     Pages("Pages", Icons.AutoMirrored.Filled.List),
@@ -160,7 +163,7 @@ private fun LeftPane(model: AppModel, current: Tab, onTab: (Tab) -> Unit, onOpen
                 Text("Star a page in the web app to see it here.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(horizontal = 28.dp, vertical = 4.dp))
             }
             items(favorites, key = { "fav:$it" }) { name ->
-                NavigationDrawerItem(label = { Text(name) }, icon = { Icon(Icons.Filled.Star, null) }, selected = false, onClick = { onOpen(name) }, modifier = Modifier.padding(horizontal = 12.dp))
+                NavigationDrawerItem(label = { Text(name) }, icon = { Icon(Icons.Filled.Star, null, tint = STAR_YELLOW) }, selected = false, onClick = { onOpen(name) }, modifier = Modifier.padding(horizontal = 12.dp))
             }
             if (workbooks.size > 1) {
                 item { PaneHeading("Workbooks") }
@@ -275,7 +278,7 @@ private fun PagesTab(model: AppModel, key: String, onOpen: (String) -> Unit) {
             LazyColumn(Modifier.fillMaxSize().testTag("pages")) {
                 items(shown, key = { it.name }) { p ->
                     Row(Modifier.fillMaxWidth().clickable { onOpen(p.name) }.padding(horizontal = 16.dp, vertical = 12.dp)) {
-                        if (p.favorite) Icon(Icons.Filled.Star, "Starred", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(end = 8.dp))
+                        if (p.favorite) Icon(Icons.Filled.Star, "Starred", tint = STAR_YELLOW, modifier = Modifier.padding(end = 8.dp))
                         Column(Modifier.weight(1f)) {
                             Text(p.name, style = MaterialTheme.typography.bodyLarge)
                             val tags = p.tags.joinToString(" ") { "#$it" }

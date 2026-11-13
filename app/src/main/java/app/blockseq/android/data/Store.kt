@@ -30,6 +30,11 @@ class Store(context: Context) {
         get() = prefs.getString("device_name", "") ?: ""
         set(v) = prefs.edit().putString("device_name", v).apply()
 
+    /** Action buttons (picture viewer, page actions) along the bottom, within thumb reach. */
+    var controlsAtBottom: Boolean
+        get() = prefs.getBoolean("controls_bottom", true)
+        set(v) = prefs.edit().putBoolean("controls_bottom", v).apply()
+
     /** Where the search field sits on the Search tab. */
     var searchAtBottom: Boolean
         get() = prefs.getBoolean("search_bottom", false)

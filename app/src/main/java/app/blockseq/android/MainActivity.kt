@@ -31,6 +31,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             BlockseqTheme {
+              androidx.compose.runtime.CompositionLocalProvider(app.blockseq.android.ui.LocalControlsAtBottom provides model.controlsAtBottom) {
                 // Test tags double as view ids, so adb/uiautomator can find controls.
                 Surface(Modifier.fillMaxSize().semantics { testTagsAsResourceId = true }, color = MaterialTheme.colorScheme.background) {
                     if (model.api == null) {
@@ -48,6 +49,7 @@ class MainActivity : ComponentActivity() {
                         }
                     }
                 }
+              }
             }
         }
     }

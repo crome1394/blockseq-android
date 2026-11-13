@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -177,6 +178,11 @@ fun PageScreen(model: AppModel, name: String, onOpen: (String) -> Unit, onBack: 
     }
     fun choosePhoto() = pickPhoto.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
 
+    // The page's buttons: in the top bar, or along the bottom (Settings → Controls at the bottom).
+    val pageActions: @Composable () -> Unit = {
+        PictureButton(onCamera = ::openCamera, onGallery = ::choosePhoto, tag = "page-picture")
+        if (model.setup != null) LockButton(model.key != null, onLock = { stopEdit(); model.lock() }, onUnlock = { unlocking = true })
+    }
     Scaffold(
         topBar = {
             TopAppBar(
@@ -195,17 +201,16 @@ fun PageScreen(model: AppModel, name: String, onOpen: (String) -> Unit, onBack: 
                     }
                 },
                 navigationIcon = { IconButton(onClick = { stopEdit(); onBack() }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") } },
-                actions = {
-                    PictureButton(onCamera = ::openCamera, onGallery = ::choosePhoto, tag = "page-picture")
-                    if (model.setup != null) {
-                        if (model.key == null) IconButton(onClick = { unlocking = true }) { Icon(Icons.Filled.Lock, "Unlock encrypted blocks") }
-                        else IconButton(onClick = { stopEdit(); model.lock() }) { Icon(Icons.Filled.LockOpen, "Lock encrypted blocks") }
-                    }
-                },
+                actions = { if (!LocalControlsAtBottom.current) pageActions() },
             )
         },
         bottomBar = {
             val node = editing
+            if (node == null && LocalControlsAtBottom.current) {
+                Surface(tonalElevation = 3.dp) {
+                    Row(Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 8.dp), horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically) { pageActions() }
+                }
+            }
             if (node != null) {
                 EditBar(
                     onOutdent = { editor.outdent(node) },
@@ -421,4 +426,17 @@ private fun readPicture(context: android.content.Context, uri: android.net.Uri):
     val fileName = name?.takeIf { it.contains('.') } ?: "photo_${System.currentTimeMillis()}.$ext"
     val bytes = resolver.openInputStream(uri)!!.use { it.readBytes() }
     return Triple(bytes, fileName, mime)
+}
+
+/**
+ * The padlock for #Encrypted blocks, coloured so its state reads at a glance:
+ * amber and closed while locked, green and open while unlocked.
+ */
+@Composable
+private fun LockButton(unlocked: Boolean, onLock: () -> Unit, onUnlock: () -> Unit) {
+    if (unlocked) {
+        IconButton(onClick = onLock, modifier = Modifier.testTag("lock")) { Icon(Icons.Filled.LockOpen, "Lock encrypted blocks", tint = Color(0xFF43A047)) }
+    } else {
+        IconButton(onClick = onUnlock, modifier = Modifier.testTag("unlock-button")) { Icon(Icons.Filled.Lock, "Unlock encrypted blocks", tint = Color(0xFFFFA000)) }
+    }
 }

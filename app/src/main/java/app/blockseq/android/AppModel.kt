@@ -40,6 +40,15 @@ class AppModel(app: Application) : AndroidViewModel(app) {
 
     var unpairedMessage by mutableStateOf<String?>(null)
 
+    /** Settings → Controls at the bottom (kept in Store; here so screens redraw). */
+    var controlsAtBottom by mutableStateOf(store.controlsAtBottom)
+        private set
+
+    fun changeControlsAtBottom(on: Boolean) {
+        store.controlsAtBottom = on
+        controlsAtBottom = on
+    }
+
     init {
         if (store.paired) connect()
     }

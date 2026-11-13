@@ -60,6 +60,15 @@ fun SettingsScreen(model: AppModel, onBack: () -> Unit) {
                 }
             }
             HorizontalDivider()
+            Section("Controls")
+            Row(Modifier.fillMaxWidth().clickable { model.changeControlsAtBottom(!model.controlsAtBottom) }.testTag("controls-bottom"), verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text("Controls at the bottom")
+                    Text("Buttons such as share, save, add picture and the padlock sit along the bottom, within reach of your thumb.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                androidx.compose.material3.Switch(checked = model.controlsAtBottom, onCheckedChange = { model.changeControlsAtBottom(it) })
+            }
+            HorizontalDivider()
             Section("Search field")
             var bottom by remember { mutableStateOf(model.store.searchAtBottom) }
             listOf(false to "Top", true to "Bottom (easier to reach with one hand)").forEach { (value, label) ->
