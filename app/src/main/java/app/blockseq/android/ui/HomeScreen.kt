@@ -122,6 +122,8 @@ fun HomeScreen(model: AppModel, onOpen: (String) -> Unit, onSettings: () -> Unit
     var pagesMenu by remember { mutableStateOf(false) }
     var filtering by rememberSaveable { mutableStateOf(false) }
     var noting by remember { mutableStateOf(false) }
+    var tasking by remember { mutableStateOf(false) }
+    if (tasking) NewTaskSheet(model) { added -> tasking = false; if (added) changes++ }
     if (noting) QuickNoteSheet(model, onOpenDay = { noting = false; onQuickNote(journalName(LocalDate.now())) }, onDone = { added -> noting = false; if (added) changes++ })
     if (creating) NewPageDialog(model, onDone = { name -> creating = false; name?.let(onOpen) })
     // Swipe sideways between the tabs; the tab bar and the swipe stay in step.
@@ -151,6 +153,7 @@ fun HomeScreen(model: AppModel, onOpen: (String) -> Unit, onSettings: () -> Unit
             when (tab) {
                 // Pages: a new page or tag. Journals: a quick note on today's journal.
                 Tab.Pages -> if (!filtering) PagesFab(pagesMenu, onToggle = { pagesMenu = !pagesMenu }, onNew = { pagesMenu = false; creating = true }, onFilter = { pagesMenu = false; filtering = true })
+                Tab.Tasks -> FloatingActionButton(onClick = { tasking = true }, modifier = Modifier.testTag("fab-task")) { Icon(Icons.Filled.Add, "New task") }
                 Tab.Journals -> FloatingActionButton(onClick = { noting = true }, modifier = Modifier.testTag("fab-note")) { Icon(Icons.Filled.Edit, "Quick note on today's journal") }
                 else -> {}
             }
@@ -513,7 +516,10 @@ private fun TasksTab(model: AppModel, key: String, onOpen: (String) -> Unit) {
             LazyColumn(Modifier.fillMaxSize().testTag("tasks")) {
                 groups.forEach { (page, list) ->
                     item(key = "g:$page") {
-                        Text(page, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary, modifier = Modifier.fillMaxWidth().clickable { onOpen(page) }.padding(start = 16.dp, top = 14.dp, bottom = 4.dp))
+                        Row(Modifier.fillMaxWidth().clickable { onOpen(page) }.padding(start = 16.dp, top = 14.dp, bottom = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                            PageIcon(page, Modifier.padding(end = 8.dp).size(20.dp))
+                            Text(page, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+                        }
                     }
                     items(list, key = { "t:" + it.id }) { t ->
                         val st = model.statuses.of(t.content)
