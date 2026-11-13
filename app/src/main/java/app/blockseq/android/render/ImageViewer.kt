@@ -79,6 +79,14 @@ fun ImageViewer(src: String, alt: String, api: Api, actions: ImageActions, onClo
     var menu by remember { mutableStateOf(false) }
     var confirmDelete by remember { mutableStateOf(false) }
     val name = src.substringAfterLast('/')
+    // In landscape the bar hides after a few seconds so the picture fills the screen; a tap brings it back.
+    val landscape = androidx.compose.ui.platform.LocalConfiguration.current.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
+    var barShown by remember { mutableStateOf(true) }
+    var barTouched by remember { mutableStateOf(0) }
+    LaunchedEffect(landscape, barShown, barTouched, menu) {
+        if (!landscape) { barShown = true; return@LaunchedEffect }
+        if (barShown && !menu) { kotlinx.coroutines.delay(3000); barShown = false }
+    }
     LaunchedEffect(src) {
         val b = runCatching { api.asset(src) }.getOrNull()
         if (b == null) { failed = true; return@LaunchedEffect }
@@ -100,15 +108,19 @@ fun ImageViewer(src: String, alt: String, api: Api, actions: ImageActions, onClo
                                 offset = if (scale == 1f) Offset.Zero else offset + pan
                             }
                         }
-                        .pointerInput(Unit) { detectTapGestures(onDoubleTap = { scale = 1f; offset = Offset.Zero }) }
+                        .pointerInput(Unit) { detectTapGestures(onTap = { barShown = !barShown || !landscape; barTouched++ }, onDoubleTap = { scale = 1f; offset = Offset.Zero }) }
                         .graphicsLayer(scaleX = scale, scaleY = scale, translationX = offset.x, translationY = offset.y),
                 )
                 failed -> Text("Could not load this picture.", color = Color.White, modifier = Modifier.align(Alignment.Center))
                 else -> CircularProgressIndicator(Modifier.align(Alignment.Center))
             }
             val bottom = app.blockseq.android.ui.LocalControlsAtBottom.current
+            androidx.compose.animation.AnimatedVisibility(
+                barShown, Modifier.align(if (bottom) Alignment.BottomCenter else Alignment.TopCenter),
+                enter = androidx.compose.animation.fadeIn(), exit = androidx.compose.animation.fadeOut(),
+            ) {
             Row(
-                Modifier.fillMaxWidth().align(if (bottom) Alignment.BottomCenter else Alignment.TopCenter)
+                Modifier.fillMaxWidth()
                     .background(Color(0x99000000)).safeDrawingPadding(),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
@@ -137,6 +149,7 @@ fun ImageViewer(src: String, alt: String, api: Api, actions: ImageActions, onClo
                         )
                     }
                 }
+            }
             }
         }
         if (confirmDelete) {

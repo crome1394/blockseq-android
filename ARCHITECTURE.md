@@ -73,7 +73,7 @@ ignored.
   in a 24 MB memory cache; a size the block asks for (`{:width …}`) is
   ignored on the phone. Pictures are fetched with the device token.
 - Tapping one opens `ImageViewer` (decoded at up to 4096 px): pinch to zoom,
-  double-tap to reset, **Share** (a copy in the app cache, offered through a
+  double-tap to reset, the bar hides after 3 s in landscape (tap to show it), **Share** (a copy in the app cache, offered through a
   `FileProvider`), **Save to phone** (MediaStore, `Pictures/Blockseq`, no
   storage permission), **Remove from block** (only in the page editor; the
   file stays) and **Delete from server** (`DELETE /api/assets`, after a
