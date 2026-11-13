@@ -22,7 +22,6 @@ import app.blockseq.android.outline.parseOutline
 import app.blockseq.android.outline.subtreeMarkdown
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.delay
@@ -477,10 +476,10 @@ class PageEditor(
         saving = true
         try {
             val sent = edits
-            val blocks = withContext(Dispatchers.Default) {
-                sealSecrets()
-                flatten(root)
-            }
+            // On the caller's (main) thread: the tree is edited there, and sealing writes to it.
+            // AES-GCM on a page's text is quick; only unlocking (PBKDF2) is slow.
+            sealSecrets()
+            val blocks = flatten(root)
             val overwrite = overwriteNext
             when (val r = api.savePage(name, version, blocks, overwrite)) {
                 is SaveResult.Saved -> {
