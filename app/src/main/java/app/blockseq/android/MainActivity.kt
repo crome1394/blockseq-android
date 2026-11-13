@@ -37,6 +37,12 @@ class MainActivity : ComponentActivity() {
         openPage = intent.getStringExtra(OPEN_PAGE)
     }
 
+    override fun onResume() {
+        super.onResume()
+        // Android can hold a widget retry back for minutes; opening the app sends waiting notes now.
+        if (app.blockseq.android.scratch.ScratchpadStore.load(this).pending.isNotEmpty()) app.blockseq.android.scratch.ScratchpadSync.request(this)
+    }
+
     companion object {
         const val OPEN_PAGE = "open_page"
     }
