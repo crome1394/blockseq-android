@@ -68,6 +68,8 @@ import androidx.compose.material.icons.filled.Tag
 import androidx.compose.material.icons.automirrored.filled.Article
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.FilterList
@@ -151,7 +153,6 @@ fun HomeScreen(model: AppModel, onOpen: (String) -> Unit, onSettings: () -> Unit
                 navigationIcon = { IconButton(onClick = { scope.launch { drawer.open() } }, modifier = Modifier.testTag("menu")) { Icon(Icons.Filled.Menu, "Menu") } },
                 actions = {
                     if (model.setup != null) LockButton(model.key != null, onLock = model::lock, onUnlock = { unlocking = true })
-                    IconButton(onClick = onSettings, modifier = Modifier.testTag("settings")) { Icon(Icons.Filled.Settings, "Settings") }
                 },
             )
         },
@@ -231,40 +232,53 @@ private fun LeftPane(model: AppModel, current: Tab, onTab: (Tab) -> Unit, onOpen
         runCatching { api.sidebar() }.onSuccess { days = it.journalDays.toSet() }
     }
     ModalDrawerSheet(Modifier.testTag("left-pane")) {
-        LazyColumn(Modifier.weight(1f)) {
-            item {
-                Text("Blockseq", style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(start = 24.dp, top = 12.dp))
-                ConnectionStatus(model)
-            }
-            items(Tab.entries.toList(), key = { "tab:" + it.name }) { t ->
-                NavigationDrawerItem(
-                    label = { Text(t.label) }, icon = { Icon(t.icon, null) }, selected = t == current, onClick = { onTab(t) },
-                    modifier = Modifier.padding(horizontal = 12.dp).height(40.dp).testTag("pane-${t.name.lowercase()}"),
-                )
-            }
-            item { PaneHeading("Favorites") }
-            if (favorites.isEmpty()) item {
-                Text("Star a page in the web app to see it here.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(horizontal = 28.dp, vertical = 4.dp))
-            }
-            items(favorites, key = { "fav:$it" }) { name ->
-                NavigationDrawerItem(label = { Text(name) }, icon = { Icon(Icons.Filled.Star, null, tint = STAR_YELLOW) }, selected = false, onClick = { onOpen(name) }, modifier = Modifier.padding(horizontal = 12.dp).height(40.dp))
-            }
-            if (workbooks.size > 1) {
-                item { PaneHeading("Workbooks") }
-                items(workbooks, key = { "wb:" + it.id }) { w ->
-                    NavigationDrawerItem(
-                        label = { Text(w.name) }, icon = { Icon(Icons.Filled.Book, null) },
-                        selected = model.store.workbook == w.id, onClick = { model.switchWorkbook(w.id) },
-                        modifier = Modifier.padding(horizontal = 12.dp).height(40.dp),
-                    )
+        Text("Blockseq", style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(start = 24.dp, top = 12.dp))
+        ConnectionStatus(model)
+        // The sections, favorites and workbooks share the height above Settings: each row
+        // grows to fill it. With too many to fit at a comfortable size, the list scrolls.
+        val rows = Tab.entries.size + maxOf(favorites.size, 1) + (if (workbooks.size > 1) workbooks.size else 0)
+        val headings = if (workbooks.size > 1) 2 else 1
+        androidx.compose.foundation.layout.BoxWithConstraints(Modifier.weight(1f).fillMaxWidth()) {
+            val fits = maxHeight >= 48.dp * rows + 40.dp * headings
+            Column(if (fits) Modifier.fillMaxSize() else Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
+                @Composable
+                fun item(content: @Composable (Modifier) -> Unit) {
+                    content(if (fits) Modifier.weight(1f).fillMaxHeight() else Modifier.height(48.dp))
+                }
+                Tab.entries.forEach { t ->
+                    item { m ->
+                        NavigationDrawerItem(
+                            label = { Text(t.label) }, icon = { Icon(t.icon, null) }, selected = t == current, onClick = { onTab(t) },
+                            modifier = m.padding(horizontal = 12.dp, vertical = 2.dp).fillMaxWidth().testTag("pane-${t.name.lowercase()}"),
+                        )
+                    }
+                }
+                PaneHeading("Favorites")
+                if (favorites.isEmpty()) item { m ->
+                    Text("Star a page in the web app to see it here.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = m.padding(horizontal = 28.dp, vertical = 4.dp))
+                }
+                favorites.forEach { name ->
+                    item { m ->
+                        NavigationDrawerItem(label = { Text(name) }, icon = { Icon(Icons.Filled.Star, null, tint = STAR_YELLOW) }, selected = false, onClick = { onOpen(name) }, modifier = m.padding(horizontal = 12.dp, vertical = 2.dp).fillMaxWidth())
+                    }
+                }
+                if (workbooks.size > 1) {
+                    PaneHeading("Workbooks")
+                    workbooks.forEach { w ->
+                        item { m ->
+                            NavigationDrawerItem(
+                                label = { Text(w.name) }, icon = { Icon(Icons.Filled.Book, null) },
+                                selected = model.store.workbook == w.id, onClick = { model.switchWorkbook(w.id) },
+                                modifier = m.padding(horizontal = 12.dp, vertical = 2.dp).fillMaxWidth(),
+                            )
+                        }
+                    }
                 }
             }
-            item {
-                HorizontalDivider(Modifier.padding(vertical = 4.dp))
-                NavigationDrawerItem(label = { Text("Settings") }, icon = { Icon(Icons.Filled.Settings, null) }, selected = false, onClick = onSettings, modifier = Modifier.padding(horizontal = 12.dp).height(40.dp))
-            }
         }
-        // The calendar sits at the bottom of the pane; the list above scrolls if it runs long.
+        // Settings sits just above the calendar, at the bottom of the pane.
+        HorizontalDivider(Modifier.padding(vertical = 4.dp))
+        NavigationDrawerItem(label = { Text("Settings") }, icon = { Icon(Icons.Filled.Settings, null) }, selected = false, onClick = onSettings, modifier = Modifier.padding(horizontal = 12.dp).height(44.dp).testTag("pane-settings"))
         HorizontalDivider(Modifier.padding(vertical = 4.dp))
         MonthCalendar(days, java.time.DayOfWeek.of(model.store.weekStart)) { onOpen(journalName(it)) }
     }

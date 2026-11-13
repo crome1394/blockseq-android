@@ -9,6 +9,7 @@ The first version. Needs a Blockseq server with device pairing.
 
 ### Added
 
+- Left pane: the sections and favorites share the height and grow to fill it (scrolling only when too many to fit); Settings sits just above the calendar. The settings cog in the home top bar is gone (Settings is in the pane).
 - Row colours fill the whole row out to the right edge, as on the web, and show at once when picked in the block menu (they used to wait for the page to reload).
 - Calendar weekday letters are bright red; Settings → Display → First day of the week (Sunday, Monday or Saturday).
 - The Differences card can be dragged around the screen by its title.
