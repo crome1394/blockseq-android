@@ -23,6 +23,7 @@ import androidx.compose.material.icons.automirrored.filled.FormatAlignLeft
 import androidx.compose.material.icons.automirrored.filled.FormatAlignRight
 import androidx.compose.material.icons.automirrored.filled.Label
 import androidx.compose.material.icons.filled.Block
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.automirrored.filled.FormatIndentDecrease
@@ -95,6 +96,10 @@ fun BlockMenu(editor: PageEditor, n: Node, server: String, onTag: () -> Unit, on
     editor.revision
     ModalBottomSheet(onDismissRequest = onClose, sheetState = sheet, modifier = Modifier.testTag("block-menu")) {
         Column(Modifier.verticalScroll(rememberScrollState()).navigationBarsPadding().padding(bottom = 12.dp)) {
+            // An X at the top right closes the menu (as a swipe down or a tap outside does).
+            Row(Modifier.fillMaxWidth().padding(end = 4.dp), horizontalArrangement = Arrangement.End) {
+                androidx.compose.material3.IconButton(onClick = onClose, modifier = Modifier.testTag("menu-close")) { Icon(androidx.compose.material.icons.Icons.Filled.Close, "Close") }
+            }
             // Colour: the row highlight.
             Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 SWATCHES.forEach { (name, rgb) ->

@@ -9,6 +9,7 @@ The first version. Needs a Blockseq server with device pairing.
 
 ### Added
 
+- An X at the top right closes the block menu, Add a tag, New page or tag, and the Differences card.
 - Pages list: regular pages have a page symbol, beside the calendar for journals and the star for starred pages.
 - Fixed: Pages → Filter → All crashed the app (the sort compared a journal's day, a Long, with 0, an Int, for pages).
 - Assets (in the ☰ menu), as in the web app: every uploaded file with a thumbnail, size, date, path (copy) and the pages that use it (tap to open); filter, Only unused, the total; Open (pictures in the viewer, other files in a phone app), Download (Pictures/Blockseq or Download/Blockseq), Delete (warns when the file is in use).

@@ -52,7 +52,7 @@ fun TagDialog(model: AppModel, blockText: String, onPick: (String) -> Unit, onCl
     val exists = tags.any { it.equals(q, ignoreCase = true) }
     AlertDialog(
         onDismissRequest = onClose,
-        title = { Text("Add a tag") },
+        title = { TitleWithClose("Add a tag", onClose, "tag-close") },
         text = {
             Column {
                 Text(blockText.lineSequence().first().take(80), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)

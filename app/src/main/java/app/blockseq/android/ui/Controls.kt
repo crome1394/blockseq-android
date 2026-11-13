@@ -2,6 +2,8 @@ package app.blockseq.android.ui
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material.icons.filled.LockOpen
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -35,4 +37,13 @@ fun copyText(context: android.content.Context, text: String) {
     val cm = context.getSystemService(android.content.ClipboardManager::class.java)
     cm.setPrimaryClip(android.content.ClipData.newPlainText("code", text))
     android.widget.Toast.makeText(context, "Copied", android.widget.Toast.LENGTH_SHORT).show()
+}
+
+/** A card's title with an X at the top right that closes it. */
+@androidx.compose.runtime.Composable
+fun TitleWithClose(title: String, onClose: () -> Unit, tag: String = "card-close") {
+    androidx.compose.foundation.layout.Row(Modifier.fillMaxWidth(), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+        androidx.compose.material3.Text(title, modifier = Modifier.weight(1f))
+        IconButton(onClick = onClose, modifier = Modifier.testTag(tag)) { Icon(androidx.compose.material.icons.Icons.Filled.Close, "Close") }
+    }
 }

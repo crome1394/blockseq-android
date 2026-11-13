@@ -655,7 +655,7 @@ private fun NewPageDialog(model: AppModel, onDone: (String?) -> Unit) {
     }
     androidx.compose.material3.AlertDialog(
         onDismissRequest = { onDone(null) },
-        title = { Text("New page or tag") },
+        title = { TitleWithClose("New page or tag", { onDone(null) }, "new-page-close") },
         text = {
             Column {
                 OutlinedTextField(name, { name = it }, singleLine = true, label = { Text("Name") }, modifier = Modifier.fillMaxWidth().testTag("new-name"))

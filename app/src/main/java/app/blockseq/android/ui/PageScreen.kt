@@ -817,6 +817,7 @@ private fun ConflictDiffDialog(editor: PageEditor, onClose: () -> Unit) {
             ) {
                 Text("Differences", style = MaterialTheme.typography.headlineSmall, modifier = Modifier.weight(1f).padding(vertical = 8.dp))
                 Icon(Icons.Filled.DragIndicator, "Drag to move", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                IconButton(onClick = onClose, modifier = Modifier.testTag("diff-close")) { Icon(Icons.Filled.Close, "Close") }
             }
             Column(Modifier.weight(1f, fill = false)) {
                 Text("− only on the other device   + only on this phone", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
