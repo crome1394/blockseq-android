@@ -18,6 +18,8 @@ sealed interface Target {
     data class Page(val name: String) : Target
     data class Url(val url: String) : Target
     data class BlockRef(val id: String) : Target
+    /** The copy button after ``code``. */
+    data class Copy(val text: String) : Target
 }
 
 /** Colours the inline renderer uses (taken from the Material theme). */
@@ -64,9 +66,14 @@ private fun AnnotatedString.Builder.link(label: String, target: Target, style: S
 }
 
 private val RULES: List<Rule> = listOf(
-    // ``text`` (the web app adds a copy button) and `text`: inline code.
-    Rule(Regex("``(.+?)``|`([^`]+)`")) { m, c, _ ->
-        withStyle(SpanStyle(fontFamily = FontFamily.Monospace, color = c.code, background = c.codeBackground)) { append(m.groupValues[1].ifEmpty { m.groupValues[2] }.trim()) }
+    // ``text`` is code with a copy button (as in the web app); `text` is plain inline code.
+    Rule(Regex("``(.+?)``|`([^`]+)`")) { m, c, tap ->
+        val code = m.groupValues[1].ifEmpty { m.groupValues[2] }.let { if (m.groupValues[1].isNotEmpty()) it.removeSurrounding(" ") else it.trim() }
+        withStyle(SpanStyle(fontFamily = FontFamily.Monospace, color = c.code, background = c.codeBackground)) { append(code) }
+        if (m.groupValues[1].isNotEmpty()) {
+            append("\u2009")
+            link("⧉", Target.Copy(code), SpanStyle(color = c.link, background = c.codeBackground, fontSize = androidx.compose.ui.unit.TextUnit.Unspecified), tap)
+        }
     },
     Rule(Regex("""\[\[([^\]]+)\]\]""")) { m, c, tap ->
         link(m.groupValues[1], Target.Page(m.groupValues[1]), SpanStyle(color = c.link), tap)

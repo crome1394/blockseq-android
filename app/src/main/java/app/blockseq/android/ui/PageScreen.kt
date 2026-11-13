@@ -119,11 +119,13 @@ fun PageScreen(model: AppModel, name: String, onOpen: (String) -> Unit, quickNot
     var tagging by remember(editor) { mutableStateOf<Node?>(null) }
     var menuFor by remember(editor) { mutableStateOf<Node?>(null) }
     val uri = LocalUriHandler.current
+    val context = androidx.compose.ui.platform.LocalContext.current
     val onTap: (Target) -> Unit = { t ->
         when (t) {
             is Target.Page -> onOpen(t.name)
             is Target.Url -> runCatching { uri.openUri(t.url) }
             is Target.BlockRef -> scope.launch { runCatching { api.blockPage(t.id) }.getOrNull()?.let(onOpen) }
+            is Target.Copy -> copyText(context, t.text)
         }
     }
     fun startEdit(n: Node, caret: Int = n.content.length) {
@@ -141,7 +143,6 @@ fun PageScreen(model: AppModel, name: String, onOpen: (String) -> Unit, quickNot
 
     // Pictures from the phone: uploaded to the workbook's assets, then put at
     // the cursor of the block being edited, or in a new block at the end.
-    val context = LocalContext.current
     var uploading by remember { mutableStateOf(false) }
     var cameraFile by remember { mutableStateOf<File?>(null) }
     fun insertPicture(uri: android.net.Uri) {

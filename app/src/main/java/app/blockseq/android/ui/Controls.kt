@@ -29,3 +29,10 @@ fun LockButton(unlocked: Boolean, onLock: () -> Unit, onUnlock: () -> Unit) {
         IconButton(onClick = onUnlock, modifier = Modifier.testTag("unlock-button")) { Icon(Icons.Filled.Lock, "Unlock encrypted blocks", tint = Color(0xFFFFA000)) }
     }
 }
+
+/** Copies text to the clipboard and says so. */
+fun copyText(context: android.content.Context, text: String) {
+    val cm = context.getSystemService(android.content.ClipboardManager::class.java)
+    cm.setPrimaryClip(android.content.ClipData.newPlainText("code", text))
+    android.widget.Toast.makeText(context, "Copied", android.widget.Toast.LENGTH_SHORT).show()
+}

@@ -9,6 +9,7 @@ The first version. Needs a Blockseq server with device pairing.
 
 ### Added
 
+- ``code`` (double graves) has a copy button after it, as in the web app.
 - Opening the app sends Scratchpad notes still waiting (Android can hold the widget's retry back for minutes). (`c38769b`)
 - A month calendar in the left pane, as in the web app: dots on days whose journal has notes, today ringed, tap a day to open it. (`2f3b18b`)
 - **Settings** open as a card over the current screen, in tabs you can swipe between: General, Display, Code, Widget, Security. Widget has the widget's look (colours, Solid / See-through / Transparent, order, buttons top or bottom), applied to every widget at once. (`225fabe`)

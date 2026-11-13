@@ -231,12 +231,14 @@ private fun PaneHeading(text: String) {
 @Composable
 private fun linkHandler(model: AppModel, onOpen: (String) -> Unit): (Target) -> Unit {
     val uri = LocalUriHandler.current
+    val context = androidx.compose.ui.platform.LocalContext.current
     val scope = rememberCoroutineScope()
     return { t ->
         when (t) {
             is Target.Page -> onOpen(t.name)
             is Target.Url -> runCatching { uri.openUri(t.url) }
             is Target.BlockRef -> scope.launch { runCatching { model.api?.blockPage(t.id) }.getOrNull()?.let(onOpen) }
+            is Target.Copy -> copyText(context, t.text)
         }
     }
 }
