@@ -52,10 +52,12 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         openPage = intent?.getStringExtra(OPEN_PAGE)
         setContent {
+            val viewer = androidx.compose.runtime.remember { app.blockseq.android.render.ImageViewerHost() }
             BlockseqTheme {
               androidx.compose.runtime.CompositionLocalProvider(
                   app.blockseq.android.ui.LocalControlsAtBottom provides model.controlsAtBottom,
                   app.blockseq.android.ui.LocalCodeFold provides model.codeFold,
+                  app.blockseq.android.render.LocalImageViewer provides viewer,
               ) {
                 // Test tags double as view ids, so adb/uiautomator can find controls.
                 Surface(Modifier.fillMaxSize().semantics { testTagsAsResourceId = true }, color = MaterialTheme.colorScheme.background) {
@@ -83,6 +85,7 @@ class MainActivity : ComponentActivity() {
                         }
                     }
                 }
+                app.blockseq.android.render.ImageViewerLayer(viewer)
               }
             }
         }

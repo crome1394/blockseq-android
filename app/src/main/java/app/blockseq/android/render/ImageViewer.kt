@@ -58,6 +58,26 @@ import kotlinx.coroutines.withContext
 import java.io.File
 
 /** What the viewer may offer for this picture, besides sharing and saving. */
+/** A picture to show full screen: what [ImageViewerHost] holds. */
+class ViewerRequest(val src: String, val alt: String, val api: Api, val actions: ImageActions)
+
+/**
+ * Where the open picture lives: at the top of the app, not inside the block
+ * that shows its thumbnail. A list drops rows that scroll out of view (turning
+ * the phone to landscape does that to long pages such as the Scratchpad), and
+ * a viewer kept in the row closed with it.
+ */
+class ImageViewerHost { var current by androidx.compose.runtime.mutableStateOf<ViewerRequest?>(null) }
+
+val LocalImageViewer = androidx.compose.runtime.staticCompositionLocalOf<ImageViewerHost?> { null }
+
+/** Draws the open picture, if any (placed once, at the top of the app). */
+@Composable
+fun ImageViewerLayer(host: ImageViewerHost) {
+    val r = host.current ?: return
+    androidx.compose.runtime.key(r) { ImageViewer(r.src, r.alt, r.api, r.actions) { host.current = null } }
+}
+
 class ImageActions(
     /** Takes the picture out of the block it is in (the file stays on the server). */
     val removeFromBlock: (() -> Unit)? = null,

@@ -9,6 +9,7 @@ The first version. Needs a Blockseq server with device pairing.
 
 ### Added
 
+- The picture viewer stays open when the phone turns on long pages such as the Scratchpad: it now lives at the top of the app, not in the row whose thumbnail opened it (that row could leave the screen in landscape and take the viewer with it).
 - Turning the phone no longer closes the picture viewer (or anything else open): the app handles rotation itself instead of being rebuilt.
 - Journals tab: a soft band on every other row; Settings → Display → Journal rows (Off, Subtle (default), Stronger, Accent colour, which follows the phone's theme colour).
 - Pages and journals have a floating ⋯ menu: New row (tap: at the end; drag: to a place, with the drop line and bin), Take a photo, Choose a picture, Lock / Unlock. The camera and padlock left the top and bottom bars.

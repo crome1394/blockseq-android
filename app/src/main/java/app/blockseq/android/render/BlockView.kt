@@ -264,7 +264,12 @@ private fun AssetImage(src: String, alt: String, api: Api?, onRemove: (() -> Uni
                 .testTag("picture"),
         )
     }
-    if (open) ImageViewer(src, alt, api, ImageActions(removeFromBlock = onRemove)) { open = false }
+    // Opened through the app-wide host when there is one, so it outlives this row.
+    val host = LocalImageViewer.current
+    LaunchedEffect(open) {
+        if (open && host != null && api != null) { host.current = ViewerRequest(src, alt, api, ImageActions(removeFromBlock = onRemove)); open = false }
+    }
+    if (open && host == null) ImageViewer(src, alt, api, ImageActions(removeFromBlock = onRemove)) { open = false }
 }
 
 /**
