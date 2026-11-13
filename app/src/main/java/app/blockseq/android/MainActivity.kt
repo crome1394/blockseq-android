@@ -18,6 +18,8 @@ import app.blockseq.android.ui.PageScreen
 import app.blockseq.android.ui.PairScreen
 import app.blockseq.android.ui.SettingsScreen
 import android.net.Uri
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.testTagsAsResourceId
@@ -26,9 +28,22 @@ import androidx.compose.ui.semantics.testTagsAsResourceId
 class MainActivity : ComponentActivity() {
     private val model: AppModel by viewModels()
 
+    /** A page to open on start (the widget opens the Scratchpad). */
+    private var openPage by androidx.compose.runtime.mutableStateOf<String?>(null)
+
+    override fun onNewIntent(intent: android.content.Intent) {
+        super.onNewIntent(intent)
+        openPage = intent.getStringExtra(OPEN_PAGE)
+    }
+
+    companion object {
+        const val OPEN_PAGE = "open_page"
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        openPage = intent?.getStringExtra(OPEN_PAGE)
         setContent {
             BlockseqTheme {
               androidx.compose.runtime.CompositionLocalProvider(
@@ -42,6 +57,9 @@ class MainActivity : ComponentActivity() {
                     } else {
                         val nav = rememberNavController()
                         val open: (String) -> Unit = { name -> nav.navigate("page/" + Uri.encode(name)) }
+                        androidx.compose.runtime.LaunchedEffect(openPage) {
+                            openPage?.let { open(it); openPage = null }
+                        }
                         NavHost(nav, startDestination = "home") {
                             composable("home") {
                                 HomeScreen(model, open, onSettings = { nav.navigate("settings") }, onQuickNote = { name -> nav.navigate("page/" + Uri.encode(name) + "?note=true") })

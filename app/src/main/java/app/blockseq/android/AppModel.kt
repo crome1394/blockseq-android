@@ -96,6 +96,8 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         store.token = token
         unpairedMessage = null
         connect()
+        // A Scratchpad widget on the home screen shows this server's page from now on.
+        app.blockseq.android.scratch.ScratchpadSync.request(getApplication())
     }
 
     fun switchWorkbook(id: String) {

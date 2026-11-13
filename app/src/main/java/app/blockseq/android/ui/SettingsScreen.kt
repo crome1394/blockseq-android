@@ -36,6 +36,7 @@ import androidx.compose.ui.unit.dp
 import app.blockseq.android.AppModel
 import app.blockseq.android.BuildConfig
 import app.blockseq.android.data.Workbook
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -90,6 +91,25 @@ fun SettingsScreen(model: AppModel, onBack: () -> Unit) {
                     RadioButton(selected = bottom == value, onClick = { bottom = value; model.store.searchAtBottom = value })
                     Text(label)
                 }
+            }
+            HorizontalDivider()
+            Section("Scratchpad widget")
+            Text("A home-screen widget for the Scratchpad page in Main: date-stamped notes, readable and addable offline. Its colours and order are set when you place it (long-press it to change them).", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            val context = androidx.compose.ui.platform.LocalContext.current
+            val scope = androidx.compose.runtime.rememberCoroutineScope()
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedButton(onClick = {
+                    val mgr = android.appwidget.AppWidgetManager.getInstance(context)
+                    val provider = android.content.ComponentName(context, app.blockseq.android.scratch.ScratchpadWidgetReceiver::class.java)
+                    if (mgr.isRequestPinAppWidgetSupported) mgr.requestPinAppWidget(provider, null, null)
+                    else android.widget.Toast.makeText(context, "Add it from the home screen's widget list", android.widget.Toast.LENGTH_LONG).show()
+                }, modifier = Modifier.testTag("add-widget")) { Text("Add to home screen") }
+                OutlinedButton(onClick = {
+                    scope.launch {
+                        val ok = app.blockseq.android.scratch.ScratchpadSync.sync(context)
+                        android.widget.Toast.makeText(context, if (ok) "Scratchpad synced" else "Could not sync (offline?)", android.widget.Toast.LENGTH_SHORT).show()
+                    }
+                }) { Text("Sync now") }
             }
             HorizontalDivider()
             Section("Encrypted blocks")

@@ -1,3 +1,5 @@
 <resources>
     <string name="app_name">Blockseq</string>
+    <string name="widget_description">Your Scratchpad page: notes with a date stamp, works offline.</string>
+    <string name="widget_name">Scratchpad</string>
 </resources>

@@ -113,6 +113,19 @@ ignored.
   not take capture requests it falls back to `CameraScreen` (CameraX), which
   asks for the camera permission the first time.
 
+## Scratchpad widget
+
+The only part that works offline: the page **Scratchpad** in Main.
+
+| Piece | Role |
+|---|---|
+| `scratch/ScratchpadStore.kt` | The phone's copy (`files/scratchpad.json`): rows as last synced, notes waiting to be sent, last sync time or error; thumbnails in `files/scratch-img/` |
+| `scratch/ScratchpadSync.kt` | Reads the page, appends waiting notes as new top-level rows and saves with the version check (on a conflict: read again, append again, up to 4 tries, so nothing on the server is overwritten); caches rows and up to 12 thumbnails (480 px) |
+| `SyncWorker` (WorkManager) | Runs a sync as soon as there is a network after a note is added, and every 30 minutes while a widget exists |
+| `scratch/ScratchpadWidget.kt` (Glance) | Draws the copy: newest or oldest first, date stamp on a small line, pictures, ⏳ for waiting notes, Sync and + buttons; tapping a row opens the page in the app. Redrawn through a revision key in each widget's state |
+| `scratch/QuickAddActivity.kt` | The +: a card over the home screen; the note is stamped `[[Nov 12th, 2026]] 21:48 …` and queued at once |
+| `scratch/WidgetConfigActivity.kt` | On placing (and *Reconfigure*): background colour and transparency, text colour, order |
+
 ## Encrypted blocks
 
 Byte-compatible with `web/js/crypto.js` and `src/crypto.rs` in the server

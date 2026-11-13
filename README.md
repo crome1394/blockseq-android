@@ -32,6 +32,7 @@ phone, straight from your own server.
 | **Live** | Pages reload when another device saves them |
 | **Paired, not logged in** | The password is used once; the phone gets its own token, revocable on the server |
 | **Workbooks** | Switch between your server's workbooks |
+| **Scratchpad widget** | Your Scratchpad page on the home screen: date-stamped notes, pictures, a + to add, works offline; your colours and transparency |
 
 ## Install
 
