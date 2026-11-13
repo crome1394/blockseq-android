@@ -10,8 +10,6 @@ data class WidgetLookPrefs(
     val newestFirst: Boolean = true,
     /** Sync and + along the bottom edge instead of the top. */
     val buttonsBottom: Boolean = false,
-    /** The padlock: notes hidden until it is tapped again. */
-    val locked: Boolean = false,
 ) {
     companion object {
         const val DEFAULT_BACKGROUND = 0xE6202124.toInt()
@@ -28,7 +26,6 @@ object WidgetPrefs {
             text = p.getInt("text", WidgetLookPrefs.DEFAULT_TEXT),
             newestFirst = p.getBoolean("newest_first", true),
             buttonsBottom = p.getBoolean("buttons_bottom", false),
-            locked = p.getBoolean("locked", false),
         )
     }
 
@@ -36,6 +33,6 @@ object WidgetPrefs {
         prefs(context).edit()
             .putInt("background", look.background).putInt("text", look.text)
             .putBoolean("newest_first", look.newestFirst).putBoolean("buttons_bottom", look.buttonsBottom)
-            .putBoolean("locked", look.locked).apply()
+            .remove("locked").apply()
     }
 }

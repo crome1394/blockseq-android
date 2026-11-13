@@ -103,11 +103,13 @@ class ScratchpadWidget : GlanceAppWidget() {
                 addAll(g)
             }
         }
+        val hasEncrypted = state.rows.any { it.content.contains("encrypted:: ") }
         @Composable
         fun Buttons() {
             Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Text(SCRATCHPAD, style = TextStyle(color = fg, fontSize = 16.sp, fontWeight = FontWeight.Bold), modifier = GlanceModifier.defaultWeight().clickable(open))
-                Image(ImageProvider(if (look.locked) R.drawable.ic_widget_lock else R.drawable.ic_widget_lock_open), if (look.locked) "Show notes" else "Hide notes", colorFilter = ColorFilter.tint(fg), modifier = GlanceModifier.size(28.dp).padding(3.dp).clickable(actionRunCallback<ToggleLock>()))
+                // Encrypted rows can only be read in the app (the key is never kept on the phone): the padlock opens it there.
+                if (hasEncrypted) Image(ImageProvider(R.drawable.ic_widget_lock), "Open in the app to unlock", colorFilter = ColorFilter.tint(fg), modifier = GlanceModifier.size(28.dp).padding(3.dp).clickable(open))
                 Spacer(GlanceModifier.width(10.dp))
                 Image(ImageProvider(R.drawable.ic_widget_sync), "Sync", colorFilter = ColorFilter.tint(fg), modifier = GlanceModifier.size(28.dp).padding(2.dp).clickable(actionRunCallback<SyncNow>()))
                 Spacer(GlanceModifier.width(10.dp))
@@ -124,9 +126,6 @@ class ScratchpadWidget : GlanceAppWidget() {
             Spacer(GlanceModifier.height(6.dp))
             val body = GlanceModifier.fillMaxWidth().defaultWeight()
             when {
-                look.locked -> Column(body, verticalAlignment = Alignment.CenterVertically, horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("Notes hidden. Tap the padlock to show them.", style = TextStyle(color = dim, fontSize = 13.sp), modifier = GlanceModifier.clickable(actionRunCallback<ToggleLock>()))
-                }
                 ordered.isEmpty() -> Column(body) { Text("Nothing yet. Tap + to add a note.", style = TextStyle(color = dim, fontSize = 13.sp)) }
                 else -> LazyColumn(body) {
                     items(ordered) { line ->
@@ -156,6 +155,7 @@ class ScratchpadWidget : GlanceAppWidget() {
                         if (bmp != null) Image(ImageProvider(bmp), part.alt, modifier = GlanceModifier.fillMaxWidth().cornerRadius(8.dp).padding(vertical = 2.dp))
                         else Text("🖼 ${part.alt.ifEmpty { "picture" }}", style = TextStyle(color = dim, fontSize = 13.sp))
                     }
+                    is Part.Rule -> androidx.glance.layout.Box(GlanceModifier.fillMaxWidth().height(1.dp).background(dim)) {}
                     is Part.Code -> Text(part.code, style = TextStyle(color = fg, fontSize = 12.sp), maxLines = 8)
                     is Part.Text -> if (part.text.isNotBlank()) Text(plain(part.text), style = TextStyle(color = fg, fontSize = if (part.heading in 1..3) 16.sp else 14.sp))
                     is Part.Table -> Text(part.rows.joinToString("\n") { it.joinToString("  ·  ") }, style = TextStyle(color = fg, fontSize = 12.sp))
@@ -163,6 +163,7 @@ class ScratchpadWidget : GlanceAppWidget() {
                     is Part.Maths -> Text(part.tex, style = TextStyle(color = dim, fontSize = 12.sp))
                 }
             }
+            if (content.contains("encrypted:: ")) Text("🔒 Encrypted. Open in the app to unlock.", style = TextStyle(color = dim, fontSize = 12.sp))
         }
     }
 
@@ -196,14 +197,6 @@ class ScratchpadWidget : GlanceAppWidget() {
             .replace(Regex("""\*\*(.+?)\*\*|__(.+?)__"""), "$1$2")
             .replace(Regex("""``(.+?)``|`([^`]+)`"""), "$1$2")
             .replace(Regex("""~~(.+?)~~|==(.+?)=="""), "$1$2")
-    }
-}
-
-/** The widget's padlock: hides or shows the notes on every Scratchpad widget. */
-class ToggleLock : ActionCallback {
-    override suspend fun onAction(context: Context, glanceId: GlanceId, parameters: ActionParameters) {
-        WidgetPrefs.save(context, WidgetPrefs.load(context).let { it.copy(locked = !it.locked) })
-        ScratchpadWidget.refresh(context)
     }
 }
 

@@ -96,7 +96,7 @@ fun WidgetLookEditor(look: WidgetLookPrefs, onChange: (WidgetLookPrefs) -> Unit)
         Box(Modifier.fillMaxWidth().height(150.dp).background(Color(0xFF6A7B8C), RoundedCornerShape(16.dp)).padding(10.dp)) {
             Column(Modifier.fillMaxSize().background(Color(look.background), RoundedCornerShape(16.dp)).padding(12.dp)) {
                 val fg = Color(look.text)
-                val head = @Composable { Row { Text("Scratchpad", color = fg, fontSize = 16.sp, modifier = Modifier.weight(1f)); Text("🔓 ⟳ +", color = fg) } }
+                val head = @Composable { Row { Text("Scratchpad", color = fg, fontSize = 16.sp, modifier = Modifier.weight(1f)); Text("⟳ +", color = fg) } }
                 if (!look.buttonsBottom) head()
                 Text("Nov 12th, 2026", color = fg, fontSize = 12.sp)
                 Text("Pick up stakes and twine", color = fg, fontSize = 14.sp, modifier = Modifier.weight(1f))
@@ -116,7 +116,7 @@ fun WidgetLookEditor(look: WidgetLookPrefs, onChange: (WidgetLookPrefs) -> Unit)
         Swatches(TEXTS, look.text) { onChange(look.copy(text = it)) }
         Text("Order", style = MaterialTheme.typography.titleMedium)
         Choice(listOf(true to "Newest first", false to "Oldest first"), look.newestFirst) { onChange(look.copy(newestFirst = it)) }
-        Text("Buttons (padlock, Sync, +)", style = MaterialTheme.typography.titleMedium)
+        Text("Buttons (Sync, +)", style = MaterialTheme.typography.titleMedium)
         Choice(listOf(false to "Top", true to "Bottom"), look.buttonsBottom) { onChange(look.copy(buttonsBottom = it)) }
     }
 }

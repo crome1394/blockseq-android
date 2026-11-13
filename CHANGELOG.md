@@ -9,6 +9,7 @@ The first version. Needs a Blockseq server with device pairing.
 
 ### Added
 
+- Widget: notes are never hidden. An encrypted row shows its own text and a 🔒 line, as in the web app while locked; the padlock (shown when there is one) opens the Scratchpad in the app to unlock it. The hide-everything padlock is gone.
 - Horizontal lines: `---` (or `***`, `___`) on its own line draws a line in pages and the widget; the editing toolbar has a button that adds one, as the web's `/hr`.
 - Pages: the button opens a small menu (New page or tag, Filter). Filter shows a card with the text field and Pages / Journals / Starred / All; closing it shows every page again.
 - The picture viewer hides its bar after 3 seconds in landscape; tap the picture to bring it back.
