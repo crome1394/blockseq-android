@@ -46,7 +46,7 @@ const val ENCRYPTED = "encrypted"
 val HIDDEN_PROPS = listOf("logseq.order-list-type", "background-color", "heading", ENCRYPTED, "text-align")
 
 private val PROP_LINE = Regex("""^([\w.-]+):: *(.*)$""")
-val ENCRYPTED_TAG = Regex("""(^|\s)#(?:encrypted|\[\[encrypted]])(?=\s|$)""", RegexOption.IGNORE_CASE)
+val ENCRYPTED_TAG = Regex("""(^|\s)#(?:encrypted|\[\[encrypted\]\])(?=\s|$)""", RegexOption.IGNORE_CASE)
 
 fun newId(): String = UUID.randomUUID().toString()
 
