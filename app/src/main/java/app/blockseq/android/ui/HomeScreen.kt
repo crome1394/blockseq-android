@@ -474,7 +474,7 @@ private fun PagesTab(model: AppModel, key: String, onOpen: (String) -> Unit, fil
                     }
                 }
                 .filter { filter.isBlank() || it.name.contains(filter.trim(), ignoreCase = true) }
-                .sortedWith(compareByDescending<PageSummary> { it.favorite }.thenByDescending { it.journalDay ?: 0 }.thenByDescending { it.updatedAt })
+                .sortedWith(compareByDescending<PageSummary> { it.favorite }.thenByDescending { it.journalDay ?: 0L }.thenByDescending { it.updatedAt })
             LazyColumn(Modifier.fillMaxSize().testTag("pages")) {
                 if (shown.isEmpty()) item { Text("No pages match.", color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(16.dp)) }
                 items(shown, key = { it.name }) { p ->
