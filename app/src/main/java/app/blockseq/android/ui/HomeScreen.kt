@@ -60,6 +60,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.material.icons.filled.StickyNote2
 import androidx.compose.material.icons.filled.Tag
 import androidx.compose.material.icons.automirrored.filled.Article
 import androidx.compose.foundation.layout.height
@@ -121,6 +122,8 @@ fun HomeScreen(model: AppModel, onOpen: (String) -> Unit, onSettings: () -> Unit
     if (unlocking) UnlockDialog(model) { unlocking = false }
     var creating by remember { mutableStateOf(false) }
     var pagesMenu by remember { mutableStateOf(false) }
+    var journalMenu by remember { mutableStateOf(false) }
+    LaunchedEffect(tab) { pagesMenu = false; journalMenu = false }
     var filtering by rememberSaveable { mutableStateOf(false) }
     var noting by remember { mutableStateOf(false) }
     var tasking by remember { mutableStateOf(false) }
@@ -153,9 +156,22 @@ fun HomeScreen(model: AppModel, onOpen: (String) -> Unit, onSettings: () -> Unit
         floatingActionButton = {
             when (tab) {
                 // Pages: a new page or tag. Journals: a quick note on today's journal.
-                Tab.Pages -> if (!filtering) PagesFab(pagesMenu, onToggle = { pagesMenu = !pagesMenu }, onNew = { pagesMenu = false; creating = true }, onFilter = { pagesMenu = false; filtering = true })
+                Tab.Pages -> if (!filtering) ActionsFab(
+                    pagesMenu, Icons.Filled.MoreVert, "Page actions", "fab-pages", { pagesMenu = !pagesMenu },
+                    listOf(
+                        FabItem("Filter", Icons.Filled.FilterList, "fab-filter") { pagesMenu = false; filtering = true },
+                        FabItem("New page or tag", Icons.Filled.Add, "fab-new") { pagesMenu = false; creating = true },
+                    ),
+                )
                 Tab.Tasks -> FloatingActionButton(onClick = { tasking = true }, modifier = Modifier.testTag("fab-task")) { Icon(Icons.Filled.Add, "New task") }
-                Tab.Journals -> FloatingActionButton(onClick = { noting = true }, modifier = Modifier.testTag("fab-note")) { Icon(Icons.Filled.Edit, "Quick note on today's journal") }
+                // Journals: the pencil opens Quick note (a card) or Edit journal (today's journal, editing its last row).
+                Tab.Journals -> ActionsFab(
+                    journalMenu, Icons.Filled.Edit, "Journal actions", "fab-journal", { journalMenu = !journalMenu },
+                    listOf(
+                        FabItem("Edit journal", Icons.Filled.Edit, "fab-edit-journal") { journalMenu = false; onQuickNote(journalName(LocalDate.now())) },
+                        FabItem("Quick note", Icons.Filled.StickyNote2, "fab-note") { journalMenu = false; noting = true },
+                    ),
+                )
                 else -> {}
             }
         },
@@ -341,21 +357,19 @@ private fun JournalCard(name: String, blocks: List<app.blockseq.android.outline.
     HorizontalDivider()
 }
 
-/**
- * The Pages tab's button: tap for a short column of actions above it,
- * new page or tag and filter.
- */
+class FabItem(val label: String, val icon: androidx.compose.ui.graphics.vector.ImageVector, val tag: String, val onClick: () -> Unit)
+
+/** A floating button that opens a short column of labelled actions above it (top item first). */
 @Composable
-private fun PagesFab(open: Boolean, onToggle: () -> Unit, onNew: () -> Unit, onFilter: () -> Unit) {
+private fun ActionsFab(open: Boolean, icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, tag: String, onToggle: () -> Unit, items: List<FabItem>) {
     Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(12.dp)) {
         androidx.compose.animation.AnimatedVisibility(open, enter = androidx.compose.animation.fadeIn() + androidx.compose.animation.expandVertically(expandFrom = Alignment.Bottom), exit = androidx.compose.animation.fadeOut() + androidx.compose.animation.shrinkVertically(shrinkTowards = Alignment.Bottom)) {
             Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                FabAction("Filter", Icons.Filled.FilterList, "fab-filter", onFilter)
-                FabAction("New page or tag", Icons.Filled.Add, "fab-new", onNew)
+                items.forEach { FabAction(it.label, it.icon, it.tag, it.onClick) }
             }
         }
-        FloatingActionButton(onClick = onToggle, modifier = Modifier.testTag("fab-pages")) {
-            Icon(if (open) Icons.Filled.Close else Icons.Filled.MoreVert, if (open) "Close" else "Page actions")
+        FloatingActionButton(onClick = onToggle, modifier = Modifier.testTag(tag)) {
+            Icon(if (open) Icons.Filled.Close else icon, if (open) "Close" else label)
         }
     }
 }
