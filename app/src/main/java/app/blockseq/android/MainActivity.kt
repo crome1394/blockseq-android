@@ -74,7 +74,8 @@ class MainActivity : ComponentActivity() {
                                 HomeScreen(model, open, onSettings = { nav.navigate("settings") }, onAssets = { nav.navigate("assets") }, onQuickNote = { name -> nav.navigate("page/" + Uri.encode(name) + "?note=true") })
                             }
                             composable("page/{name}?note={note}") { entry ->
-                                val name = Uri.decode(entry.arguments?.getString("name") ?: "")
+                                // Navigation has already decoded it; decoding again breaks names with "%".
+                                val name = entry.arguments?.getString("name") ?: ""
                                 val note = entry.arguments?.getString("note") == "true"
                                 PageScreen(model, name, open, quickNote = note) { nav.popBackStack() }
                             }
