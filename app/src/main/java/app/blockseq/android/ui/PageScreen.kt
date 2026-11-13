@@ -24,6 +24,8 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.FormatIndentDecrease
 import androidx.compose.material.icons.automirrored.filled.FormatIndentIncrease
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.automirrored.filled.Article
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.Check
@@ -300,7 +302,17 @@ fun PageScreen(model: AppModel, name: String, onOpen: (String) -> Unit, onBack: 
                     }
                     items(groups, key = { "ref:" + it.pageName }) { g ->
                         Column(Modifier.padding(horizontal = 16.dp, vertical = 6.dp)) {
-                            Text(g.pageName, color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.titleSmall, modifier = Modifier.clickable { onOpen(g.pageName) })
+                            // A clear target for opening the page the reference lives on (a calendar for a
+                            // journal), away from the links inside the text, which open other pages.
+                            Row(Modifier.fillMaxWidth().clickable { onOpen(g.pageName) }.testTag("ref-open"), verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    if (isJournalName(g.pageName)) Icons.Filled.CalendarMonth else Icons.AutoMirrored.Filled.Article,
+                                    "Open ${g.pageName}",
+                                    tint = app.blockseq.android.render.inlineColors().link,
+                                    modifier = Modifier.padding(end = 8.dp).size(22.dp),
+                                )
+                                Text(g.pageName, style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(vertical = 6.dp))
+                            }
                             g.blocks.forEach { b -> BlockContent(b.content, model.statuses, api, onTap, null, Modifier.padding(start = 8.dp, top = 4.dp)) }
                         }
                     }
@@ -440,3 +452,6 @@ private fun LockButton(unlocked: Boolean, onLock: () -> Unit, onUnlock: () -> Un
         IconButton(onClick = onUnlock, modifier = Modifier.testTag("unlock-button")) { Icon(Icons.Filled.Lock, "Unlock encrypted blocks", tint = Color(0xFFFFA000)) }
     }
 }
+
+/** "Oct 29th, 2026": the server's journal page names. */
+internal fun isJournalName(name: String) = Regex("""^[A-Z][a-z]{2} \d{1,2}(st|nd|rd|th), \d{4}$""").matches(name)

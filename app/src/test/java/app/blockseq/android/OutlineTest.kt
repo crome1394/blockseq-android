@@ -115,3 +115,12 @@ class HighlightTest {
         assertEquals(c.number, colorAt(code.lastIndexOf('2')))
     }
 }
+
+class ShownTextTest {
+    @org.junit.Test
+    fun hiddenPropertiesAreNotShown() {
+        assertEquals("System76 Thelio #devices", app.blockseq.android.render.shownText("System76 Thelio #devices\nbackground-color:: blue\nid:: 6f1c2a9e-3b7d-4c55-9a10-2f4e8d7b1c03"))
+        assertEquals(true, app.blockseq.android.ui.isJournalName("Oct 29th, 2026"))
+        assertEquals(false, app.blockseq.android.ui.isJournalName("HP EliteDesk 800 G6"))
+    }
+}

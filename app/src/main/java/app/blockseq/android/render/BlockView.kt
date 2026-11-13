@@ -104,8 +104,10 @@ fun BlockContent(
     /** Takes a picture out of this block (the picture viewer offers it); null: not offered. */
     onRemoveImage: ((src: String) -> Unit)? = null,
 ) {
-    val st = statuses.of(content)
-    var body = if (st != null) statuses.strip(content) else content
+    // Managed property lines (background-color::, id::, …) are never shown, as in the web app.
+    val visible = shownText(content)
+    val st = statuses.of(visible)
+    var body = if (st != null) statuses.strip(visible) else visible
     if (st != null) body = TASK_TAG.replaceFirst(body, "")
     val colors = inlineColors()
     val done = st?.done == true
@@ -252,4 +254,12 @@ private fun CodeBlock(lang: String, code: String) {
             )
         }
     }
+}
+
+private val ALWAYS_HIDDEN = Regex("""^(id|collapsed|logseq\.order-list-type|background-color|heading|encrypted|text-align):: .*$""")
+
+/** Block text as shown: without the property lines the web app hides (never the first line). */
+fun shownText(content: String): String {
+    val lines = content.split('\n')
+    return (listOf(lines.first()) + lines.drop(1).filterNot { ALWAYS_HIDDEN.matches(it) }).joinToString("\n")
 }
