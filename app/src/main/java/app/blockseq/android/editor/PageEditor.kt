@@ -277,6 +277,24 @@ class PageEditor(
         changed()
     }
 
+    /** Dropped after a drag: see [placeNode]. Blocks inside a locked encrypted block stay put. */
+    fun moveAfter(n: Node, prev: Node?, prevDepth: Int, depth: Int): Boolean {
+        if (prev != null && depth == prevDepth + 1 && isLocked(prev)) return false
+        if (!placeNode(root, n, prev, prevDepth, depth)) return false
+        changed()
+        return true
+    }
+
+    /** A new empty block beside [n]: above it or below it (below goes after its children). */
+    fun insertBeside(n: Node, below: Boolean): Node {
+        val parent = n.parent ?: root
+        val fresh = Node(newId(), "")
+        fresh.parent = parent
+        parent.children.add(parent.children.indexOf(n) + if (below) 1 else 0, fresh)
+        changed(save = false)
+        return fresh
+    }
+
     fun move(n: Node, dir: Int) {
         val parent = n.parent ?: return
         val i = parent.children.indexOf(n)

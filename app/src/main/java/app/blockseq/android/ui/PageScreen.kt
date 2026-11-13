@@ -19,6 +19,26 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.awaitLongPressOrCancellation
+import androidx.compose.foundation.gestures.scrollBy
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.foundation.layout.height
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.zIndex
+import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.ui.geometry.Offset
+import android.view.HapticFeedbackConstants
+import app.blockseq.android.editor.Row as OutlineRow
+import app.blockseq.android.editor.depthRange
+import app.blockseq.android.editor.subtreeIds
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
@@ -285,13 +305,134 @@ fun PageScreen(model: AppModel, name: String, onOpen: (String) -> Unit, quickNot
             }
             val rows = remember(editor.revision, editor) { editor.rows }
             val lines = remember(rows) { treeLevels(rows.map { it.depth }) }
-            LazyColumn(Modifier.fillMaxSize().testTag("outline"), contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = 120.dp)) {
+            val view = LocalView.current
+            val density = LocalDensity.current
+            val step = with(density) { 20.dp.toPx() }
+            val listState = rememberLazyListState()
+            val currentRows by rememberUpdatedState(rows)
+            val currentEditing by rememberUpdatedState(editingId)
+            // Where the block being dragged would land, from the finger's place in the list.
+            fun dropFor(d: Drag): Drop? {
+                val skip = subtreeIds(currentRows, d.node)
+                val rest = currentRows.filter { it.node.id !in skip }
+                val pos = rest.withIndex().associate { (i, r) -> r.node.id to i }
+                val seen = listState.layoutInfo.visibleItemsInfo.filter { it.key in pos }
+                if (seen.isEmpty()) return null
+                val hit = seen.firstOrNull { it.offset + it.size / 2f > d.fingerY }
+                val k = hit?.let { pos.getValue(it.key as String) } ?: (pos.getValue(seen.last().key as String) + 1)
+                val lineY = hit?.offset?.toFloat() ?: seen.last().let { (it.offset + it.size).toFloat() }
+                val range = depthRange(rest, k) { it.collapsed || editor.isLocked(it) }
+                val depth = (d.depth + Math.round(d.dx / step)).coerceIn(range)
+                return Drop(rest.getOrNull(k - 1), depth, lineY)
+            }
+            var drag by remember(editor) { mutableStateOf<Drag?>(null) }
+            var gapPressed by remember(editor) { mutableStateOf<String?>(null) }
+            val drop = drag?.let { dropFor(it) }
+            // A light tick each time the landing place changes.
+            var lastDrop by remember { mutableStateOf<Pair<String?, Int>?>(null) }
+            LaunchedEffect(drop?.prev?.node?.id, drop?.depth, drag != null) {
+                val now = drop?.let { it.prev?.node?.id to it.depth }
+                if (drag != null && lastDrop != null && now != lastDrop) view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+                lastDrop = if (drag != null) now else null
+            }
+            // Near the top or bottom edge, the page scrolls under the finger.
+            LaunchedEffect(drag != null) {
+                while (drag != null) {
+                    val d = drag ?: break
+                    val h = listState.layoutInfo.viewportSize.height
+                    val edge = with(density) { 72.dp.toPx() }
+                    val by = when {
+                        d.fingerY < edge -> -(edge - d.fingerY) / 4
+                        d.fingerY > h - edge -> (d.fingerY - (h - edge)) / 4
+                        else -> 0f
+                    }
+                    if (by != 0f) listState.scrollBy(by)
+                    kotlinx.coroutines.delay(16)
+                }
+            }
+            Box(Modifier.fillMaxSize()) {
+            LazyColumn(Modifier.fillMaxSize().testTag("outline").pointerInput(editor) {
+                // Press and hold a block: let go to open its menu, or drag it to move it
+                // (sideways changes its depth). Taken in the Initial pass so the list
+                // does not scroll and the block does not count it as a tap.
+                awaitEachGesture {
+                    val down = awaitFirstDown(requireUnconsumed = false)
+                    // The thin strip above each block: a tap there adds a row in between.
+                    val gapPx = 8.dp.toPx()
+                    fun gapAt(y: Float) = listState.layoutInfo.visibleItemsInfo.firstOrNull { y >= it.offset && y < it.offset + gapPx }
+                        ?.let { item -> currentRows.firstOrNull { it.node.id == item.key } }
+                    gapAt(down.position.y)?.let { r ->
+                        // Watched in the Initial pass so the row next to it (whose touch area
+                        // is stretched to 48 dp) does not take the tap; a drag still scrolls.
+                        gapPressed = r.node.id
+                        try {
+                            while (true) {
+                                val ch = awaitPointerEvent(PointerEventPass.Initial).changes.firstOrNull { it.id == down.id } ?: break
+                                if ((ch.position - down.position).getDistance() > viewConfiguration.touchSlop) break
+                                if (!ch.pressed) {
+                                    if (ch.uptimeMillis - down.uptimeMillis > viewConfiguration.longPressTimeoutMillis) break
+                                    ch.consume()
+                                    view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+                                    startEdit(editor.insertBeside(r.node, below = false))
+                                    break
+                                }
+                            }
+                        } finally { gapPressed = null }
+                        return@awaitEachGesture
+                    }
+                    val held = awaitLongPressOrCancellation(down.id) ?: return@awaitEachGesture
+                    val item = listState.layoutInfo.visibleItemsInfo.firstOrNull { held.position.y >= it.offset && held.position.y < it.offset + it.size } ?: return@awaitEachGesture
+                    val row = currentRows.firstOrNull { it.node.id == item.key } ?: return@awaitEachGesture
+                    if (row.node.id == currentEditing) return@awaitEachGesture
+                    view.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
+                    var moved = false
+                    var released = false
+                    drag = Drag(row.node, row.depth, held.position.y - item.offset, held.position.y, 0f)
+                    try {
+                        while (true) {
+                            val ev = awaitPointerEvent(PointerEventPass.Initial)
+                            val ch = ev.changes.firstOrNull { it.id == held.id } ?: break
+                            ch.consume()
+                            if (!ch.pressed) { released = true; break }
+                            val off = ch.position - held.position
+                            if (!moved && off.getDistance() > viewConfiguration.touchSlop) moved = true
+                            if (moved) drag = drag?.copy(fingerY = ch.position.y, dx = off.x)
+                        }
+                        val d = drag
+                        if (released && !moved) menuFor = row.node
+                        else if (released && d != null) {
+                            val to = dropFor(d)
+                            if (to != null && editor.moveAfter(d.node, to.prev?.node, to.prev?.depth ?: -1, to.depth)) {
+                                view.performHapticFeedback(if (android.os.Build.VERSION.SDK_INT >= 30) HapticFeedbackConstants.CONFIRM else HapticFeedbackConstants.VIRTUAL_KEY)
+                                scope.launch { editor.save() }
+                            } else view.performHapticFeedback(if (android.os.Build.VERSION.SDK_INT >= 30) HapticFeedbackConstants.REJECT else HapticFeedbackConstants.LONG_PRESS)
+                        }
+                    } finally { drag = null }
+                }
+            }, state = listState, contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = 120.dp)) {
                 items(rows.size, key = { rows[it].node.id }) { i ->
                     val row = rows[i]
                     val n = row.node
                     val nextDepth = rows.getOrNull(i + 1)?.depth ?: -1
                     val guide = MaterialTheme.colorScheme.outlineVariant
-                    Row(Modifier.fillMaxWidth().treeLines(row.depth, nextDepth, lines[i], guide).padding(start = (12 + row.depth * 20).dp, end = 12.dp, top = 4.dp, bottom = 4.dp)) {
+                    val lifted = drag?.node === n
+                    val carried = drag != null && !lifted && drag?.let { d -> n.id in subtreeIds(rows, d.node) } == true
+                    Column(
+                        Modifier.then(if (lifted) Modifier.zIndex(1f).graphicsLayer {
+                            val d = drag ?: return@graphicsLayer
+                            val at = listState.layoutInfo.visibleItemsInfo.firstOrNull { it.key == n.id }?.offset ?: 0
+                            translationY = d.fingerY - d.grabY - at
+                            translationX = d.dx
+                            shadowElevation = 12.dp.toPx()
+                            shape = androidx.compose.foundation.shape.RoundedCornerShape(8.dp)
+                            clip = true
+                        }.background(MaterialTheme.colorScheme.surfaceContainerHigh) else Modifier)
+                            .graphicsLayer { alpha = if (carried) 0.35f else 1f }
+                            .treeLines(row.depth, nextDepth, lines[i], guide),
+                    ) {
+                    // Tap the thin gap above a block to add a row there.
+                    GapAbove(row.depth, gapPressed == n.id)
+                    Row(Modifier.fillMaxWidth().padding(start = (12 + row.depth * 20).dp, end = 12.dp, bottom = 4.dp)) {
                         Bullet(n, editor, numberOf(n)) { editor.toggleCollapse(n) }
                         Spacer(Modifier.width(8.dp))
                         if (n.id == editingId) {
@@ -319,7 +460,7 @@ fun PageScreen(model: AppModel, name: String, onOpen: (String) -> Unit, quickNot
                             )
                         } else {
                             // Tap to edit; press and hold to add a tag (any block, children too).
-                            Box(Modifier.weight(1f).combinedClickable(onClick = { if (!editor.isLocked(n)) startEdit(n) }, onLongClick = { menuFor = n }).testTag("block")) {
+                            Box(Modifier.weight(1f).clickable { if (!editor.isLocked(n)) startEdit(n) }.testTag("block")) {
                                 if (editor.isLocked(n)) {
                                     Column {
                                         BlockContent(n.content, model.statuses, api, onTap, null)
@@ -338,6 +479,7 @@ fun PageScreen(model: AppModel, name: String, onOpen: (String) -> Unit, quickNot
                             }
                         }
                     }
+                }
                 }
                 item {
                     TextButtonRow("Add a block") { startEdit(editor.addAtEnd()) }
@@ -365,11 +507,21 @@ fun PageScreen(model: AppModel, name: String, onOpen: (String) -> Unit, quickNot
                     }
                 }
             }
+            // The line where the dragged block would land, indented to its new depth.
+            drop?.let { to ->
+                val color = MaterialTheme.colorScheme.primary
+                androidx.compose.foundation.Canvas(Modifier.fillMaxSize()) {
+                    val x = (12 + to.depth * 20).dp.toPx()
+                    drawCircle(color, 4.dp.toPx(), Offset(x + 4.dp.toPx(), to.lineY))
+                    drawLine(color, Offset(x + 4.dp.toPx(), to.lineY), Offset(size.width - 12.dp.toPx(), to.lineY), 3.dp.toPx())
+                }
+            }
+            }
         }
     }
     if (unlocking) UnlockDialog(model) { unlocking = false }
     menuFor?.let { n ->
-        BlockMenu(editor, n, model.store.server, onTag = { menuFor = null; tagging = n }, onClose = { menuFor = null; scope.launch { editor.save() } })
+        BlockMenu(editor, n, model.store.server, onTag = { menuFor = null; tagging = n }, onAddRow = { fresh -> menuFor = null; startEdit(fresh) }, onClose = { menuFor = null; scope.launch { editor.save() } })
     }
     tagging?.let { n ->
         TagDialog(model, n.content, onPick = { tag -> editor.addTag(n, tag); tagging = null; scope.launch { editor.save() } }, onClose = { tagging = null })
@@ -381,6 +533,28 @@ fun PageScreen(model: AppModel, name: String, onOpen: (String) -> Unit, quickNot
             if (taken) insertPicture(FileProvider.getUriForFile(context, "${context.packageName}.files", shot)) else shot.delete()
         }
     }
+}
+
+/** A block being dragged: where the finger is (in the list) and how far sideways it went. */
+private data class Drag(val node: Node, val depth: Int, val grabY: Float, val fingerY: Float, val dx: Float)
+
+/** Where it would land: after [prev] (none: first on the page), at [depth]; [lineY] in the list. */
+private data class Drop(val prev: OutlineRow?, val depth: Int, val lineY: Float)
+
+/** The thin strip above a block (a tap there, found by the list, adds a row); a faint + line while pressed. */
+@Composable
+private fun GapAbove(depth: Int, pressed: Boolean) {
+    val color = MaterialTheme.colorScheme.primary
+    Box(
+        Modifier.fillMaxWidth().height(8.dp).drawBehind {
+            if (!pressed) return@drawBehind
+            val x = (12 + depth * 20).dp.toPx()
+            val y = size.height / 2
+            drawLine(color.copy(alpha = 0.6f), Offset(x + 16.dp.toPx(), y), Offset(size.width - 12.dp.toPx(), y), 2.dp.toPx())
+            drawLine(color, Offset(x + 2.dp.toPx(), y), Offset(x + 12.dp.toPx(), y), 2.dp.toPx())
+            drawLine(color, Offset(x + 7.dp.toPx(), y - 5.dp.toPx()), Offset(x + 7.dp.toPx(), y + 5.dp.toPx()), 2.dp.toPx())
+        },
+    )
 }
 
 @Composable
@@ -521,7 +695,7 @@ internal fun numberOf(n: Node): Int? {
 private fun Modifier.treeLines(depth: Int, nextDepth: Int, passing: BooleanArray, color: androidx.compose.ui.graphics.Color) = drawBehind {
     val stroke = 1.dp.toPx()
     fun x(level: Int) = (12 + level * 20 + 8).dp.toPx()
-    val dotY = 21.dp.toPx() // row padding 4 + bullet padding 9 + half its 16
+    val dotY = 25.dp.toPx() // gap strip 8 + bullet padding 9 + half its 16
     for (level in 0 until depth) {
         when {
             // A later sibling of this row's branch still comes: the line runs through.

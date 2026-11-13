@@ -23,6 +23,14 @@ import androidx.compose.material.icons.automirrored.filled.FormatAlignLeft
 import androidx.compose.material.icons.automirrored.filled.FormatAlignRight
 import androidx.compose.material.icons.automirrored.filled.Label
 import androidx.compose.material.icons.filled.Block
+import androidx.compose.material.icons.filled.ArrowDownward
+import androidx.compose.material.icons.filled.ArrowUpward
+import androidx.compose.material.icons.automirrored.filled.FormatIndentDecrease
+import androidx.compose.material.icons.automirrored.filled.FormatIndentIncrease
+import androidx.compose.material.icons.filled.VerticalAlignBottom
+import androidx.compose.material.icons.filled.VerticalAlignTop
+import android.view.HapticFeedbackConstants
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.material.icons.filled.ContentCut
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.FormatAlignCenter
@@ -71,8 +79,10 @@ import java.time.format.DateTimeFormatter
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun BlockMenu(editor: PageEditor, n: Node, server: String, onTag: () -> Unit, onClose: () -> Unit) {
+fun BlockMenu(editor: PageEditor, n: Node, server: String, onTag: () -> Unit, onAddRow: (Node) -> Unit, onClose: () -> Unit) {
     val context = LocalContext.current
+    val view = LocalView.current
+    fun tick() = view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
     val clipboard = LocalClipboardManager.current
     // Opens half way; dragging anywhere on it (not just the handle) pulls it up or down.
     val sheet = rememberModalBottomSheetState(skipPartiallyExpanded = false)
@@ -123,6 +133,18 @@ fun BlockMenu(editor: PageEditor, n: Node, server: String, onTag: () -> Unit, on
                 }
             }
             HorizontalDivider(Modifier.padding(vertical = 4.dp))
+            // Moving: the sheet stays open so a block can be stepped a few places.
+            val parent = n.parent
+            val i = parent?.children?.indexOf(n) ?: -1
+            Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp), horizontalArrangement = Arrangement.SpaceEvenly) {
+                MoveButton(Icons.Filled.ArrowUpward, "Move up", "menu-up", i > 0) { editor.move(n, -1); tick() }
+                MoveButton(Icons.Filled.ArrowDownward, "Move down", "menu-down", parent != null && i < parent.children.size - 1) { editor.move(n, 1); tick() }
+                MoveButton(Icons.AutoMirrored.Filled.FormatIndentDecrease, "Outdent", "menu-outdent", parent?.parent != null) { editor.outdent(n); tick() }
+                MoveButton(Icons.AutoMirrored.Filled.FormatIndentIncrease, "Indent", "menu-indent", i > 0 && !editor.isLocked(parent!!.children[i - 1])) { editor.indent(n); tick() }
+            }
+            HorizontalDivider(Modifier.padding(vertical = 4.dp))
+            Item(Icons.Filled.VerticalAlignTop, "Add row above", "menu-add-above") { onAddRow(editor.insertBeside(n, below = false)) }
+            Item(Icons.Filled.VerticalAlignBottom, "Add row below", "menu-add-below") { onAddRow(editor.insertBeside(n, below = true)) }
             Item(Icons.AutoMirrored.Filled.Label, "Add tag…", "menu-tag") { onTag() }
             Item(Icons.Filled.FormatStrikethrough, "Strikethrough", "menu-strike") { editor.toggleStrike(n); onClose() }
             Item(Icons.Filled.Schedule, "Add timestamp") {
@@ -161,4 +183,16 @@ private fun Item(icon: ImageVector, label: String, tag: String = "", danger: Boo
         leadingContent = { Icon(icon, null, tint = color) },
         modifier = Modifier.clickable(onClick = onClick).then(if (tag.isNotEmpty()) Modifier.testTag(tag) else Modifier),
     )
+}
+
+@Composable
+private fun MoveButton(icon: ImageVector, label: String, tag: String, enabled: Boolean, onClick: () -> Unit) {
+    Column(
+        Modifier.clickable(enabled = enabled, onClick = onClick).padding(horizontal = 10.dp, vertical = 6.dp).testTag(tag),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        val color = if (enabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+        Icon(icon, null, tint = color)
+        Text(label, style = MaterialTheme.typography.labelSmall, color = color)
+    }
 }
