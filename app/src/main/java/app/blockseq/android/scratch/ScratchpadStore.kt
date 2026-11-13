@@ -51,11 +51,19 @@ object ScratchpadStore {
         next
     }
 
-    /** Queues a note stamped with today's date ("[[Nov 12th, 2026]] …", a link to the day's journal). */
+    /**
+     * Queues a note. The day's first note gets a row of its own above it with
+     * the date (`[[Nov 13th, 2026]]`, a link to the day's journal); later notes
+     * that day go in plain.
+     */
     fun add(context: Context, text: String): PendingNote {
         val stamp = "[[${journalName(LocalDate.now())}]]"
-        val note = PendingNote(java.util.UUID.randomUUID().toString(), "$stamp ${text.trim()}", System.currentTimeMillis())
-        update(context) { it.copy(pending = it.pending + note) }
+        val note = PendingNote(java.util.UUID.randomUUID().toString(), text.trim(), System.currentTimeMillis())
+        update(context) { s ->
+            val dated = (s.rows.filter { it.depth == 0 }.map { it.content } + s.pending.map { it.content }).any { it.startsWith(stamp) }
+            val head = if (dated) emptyList() else listOf(PendingNote(java.util.UUID.randomUUID().toString(), stamp, note.createdAt))
+            s.copy(pending = s.pending + head + note)
+        }
         return note
     }
 

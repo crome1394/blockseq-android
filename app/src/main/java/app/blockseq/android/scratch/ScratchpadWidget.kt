@@ -94,13 +94,21 @@ class ScratchpadWidget : GlanceAppWidget() {
         val groups = mutableListOf<MutableList<Line.Note>>()
         state.rows.forEach { r -> if (r.depth == 0 || groups.isEmpty()) groups += mutableListOf(Line.Note(r.content, r.depth, false)) else groups.last() += Line.Note(r.content, r.depth, false) }
         state.pending.forEach { groups += mutableListOf(Line.Note(it.content, 0, true)) }
-        // A heading for each day; rows then show only their time.
+        // Days in page order: a date row alone ([[Nov 13th, 2026]]) starts a day and
+        // becomes its heading; older rows carry the date at their start.
+        val days = mutableListOf<Pair<String?, MutableList<List<Line.Note>>>>()
+        for (g in groups) {
+            val s = splitStamp(shownText(g.first().content))
+            val dateRow = s.day != null && s.body.isBlank() && g.size == 1
+            if (s.day != null && s.day != days.lastOrNull()?.first) days += s.day to mutableListOf()
+            if (days.isEmpty()) days += null to mutableListOf()
+            if (!dateRow) days.last().second += g
+        }
         val ordered = buildList {
-            var day: String? = null
-            for (g in if (look.newestFirst) groups.reversed() else groups) {
-                val d = splitStamp(shownText(g.first().content)).day
-                if (d != null && d != day) { add(Line.Day(d)); day = d }
-                addAll(g)
+            for ((day, gs) in if (look.newestFirst) days.reversed() else days) {
+                if (gs.isEmpty()) continue
+                if (day != null) add(Line.Day(day))
+                (if (look.newestFirst) gs.reversed() else gs).forEach { addAll(it) }
             }
         }
         val hasEncrypted = state.rows.any { it.content.contains("encrypted:: ") }
@@ -124,7 +132,7 @@ class ScratchpadWidget : GlanceAppWidget() {
         Column(GlanceModifier.fillMaxSize().background(Color(look.background)).cornerRadius(16.dp).padding(12.dp)) {
             if (!look.buttonsBottom) Buttons()
             val status = buildList {
-                if (state.pending.isNotEmpty()) add("⏳ ${state.pending.size} waiting")
+                state.pending.count { splitStamp(it.content).body.isNotBlank() }.takeIf { it > 0 }?.let { add("⏳ $it waiting") }
                 state.error?.let { add(it) } ?: state.lastSync?.let { add("synced ${android.text.format.DateUtils.getRelativeTimeSpanString(it)}") }
             }.joinToString(" · ")
             if (status.isNotEmpty()) Text(status, style = TextStyle(color = dim, fontSize = 11.sp), maxLines = 1)
@@ -168,7 +176,7 @@ class ScratchpadWidget : GlanceAppWidget() {
                     is Part.Maths -> Text(part.tex, style = TextStyle(color = dim, fontSize = 12.sp))
                 }
             }
-            if (content.contains("encrypted:: ")) Text("🔒 Encrypted. Open in the app to unlock.", style = TextStyle(color = dim, fontSize = 12.sp))
+            if (content.contains("encrypted:: ")) Text(if (WidgetLockState.unlocked) "🔓 Unlocked in the app. Open it to read." else "🔒 Encrypted. Open in the app to unlock.", style = TextStyle(color = dim, fontSize = 12.sp))
         }
     }
 
