@@ -9,6 +9,7 @@ The first version. Needs a Blockseq server with device pairing.
 
 ### Added
 
+- Pages list: regular pages have a page symbol, beside the calendar for journals and the star for starred pages.
 - Fixed: Pages → Filter → All crashed the app (the sort compared a journal's day, a Long, with 0, an Int, for pages).
 - Assets (in the ☰ menu), as in the web app: every uploaded file with a thumbnail, size, date, path (copy) and the pages that use it (tap to open); filter, Only unused, the total; Open (pictures in the viewer, other files in a phone app), Download (Pictures/Blockseq or Download/Blockseq), Delete (warns when the file is in use).
 - The picture viewer stays open when the phone turns on long pages such as the Scratchpad: it now lives at the top of the app, not in the row whose thumbnail opened it (that row could leave the screen in landscape and take the viewer with it).

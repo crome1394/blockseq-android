@@ -481,6 +481,7 @@ private fun PagesTab(model: AppModel, key: String, onOpen: (String) -> Unit, fil
                     Row(Modifier.fillMaxWidth().clickable { onOpen(p.name) }.padding(horizontal = 16.dp, vertical = 12.dp)) {
                         if (p.favorite) Icon(Icons.Filled.Star, "Starred", tint = STAR_YELLOW, modifier = Modifier.padding(end = 8.dp))
                         else if (p.journalDay != null) Icon(Icons.Filled.CalendarMonth, "Journal", tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(end = 8.dp))
+                        else Icon(Icons.AutoMirrored.Filled.Article, "Page", tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(end = 8.dp))
                         Column(Modifier.weight(1f)) {
                             Text(p.name, style = MaterialTheme.typography.bodyLarge)
                             val tags = p.tags.joinToString(" ") { "#$it" }
