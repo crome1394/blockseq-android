@@ -9,6 +9,7 @@ The first version. Needs a Blockseq server with device pairing.
 
 ### Added
 
+- Fixed: on a slow connection, New task could say it failed after adding the task, so trying again added it twice.
 - Fixed: pages with % in their name ("100% done") opened as a different, garbled page: the name was decoded twice.
 - Fixed: a change from another device arriving while a block was open reloaded the page under it, and the next keystroke put the old text back over theirs without a conflict. The page now reloads when the block closes.
 - Fixed: leaving a page (Back) less than a second after typing could drop the change: the last save was started on the page's own task just as it was being stopped.

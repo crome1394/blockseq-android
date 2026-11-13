@@ -106,7 +106,9 @@ fun NewTaskSheet(model: AppModel, onDone: (added: Boolean) -> Unit) {
                         editor.setText(editor.noteRow(), model.statuses.with(body, word))
                         editor.save()
                         busy = false
-                        if (editor.conflict == null && editor.error == null && !editor.dirty) onDone(true)
+                        // Saved once is enough: a slow save leaves the editor dirty with a follow-up
+                        // save queued, which must not read as a failure (a retry would add it twice).
+                        if (editor.conflict == null && editor.lastSaved != null) onDone(true)
                         else error = editor.error ?: "Could not add it (the day changed elsewhere); try again."
                     }
                 }) { Text(if (busy) "Adding…" else "Add task") }
