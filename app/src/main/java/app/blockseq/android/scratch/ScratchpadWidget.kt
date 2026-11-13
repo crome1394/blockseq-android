@@ -91,18 +91,31 @@ class ScratchpadWidget : GlanceAppWidget() {
         val dim = ColorProvider(text.copy(alpha = 0.65f))
         val open = actionStartActivity(Intent(context, MainActivity::class.java).putExtra(MainActivity.OPEN_PAGE, SCRATCHPAD).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP))
         // Rows as synced plus notes not sent yet; each top-level row keeps its children with it.
+        // The page as it will be once the waiting notes are sent (each under its day).
+        val waitingIds = state.pending.map { it.id }.toSet()
+        val merged = withPending(state.rows.map { app.blockseq.android.outline.Block(it.id, it.parent, it.content) }, state.pending)
+        val depthOf = HashMap<String, Int>()
         val groups = mutableListOf<MutableList<Line.Note>>()
-        state.rows.forEach { r -> if (r.depth == 0 || groups.isEmpty()) groups += mutableListOf(Line.Note(r.content, r.depth, false)) else groups.last() += Line.Note(r.content, r.depth, false) }
-        state.pending.forEach { groups += mutableListOf(Line.Note(it.content, 0, true)) }
+        merged.forEach { b ->
+            val d = b.parentId?.let { (depthOf[it] ?: 0) + 1 } ?: 0
+            depthOf[b.id] = d
+            val line = Line.Note(b.content, d, b.id in waitingIds)
+            if (d == 0 || groups.isEmpty()) groups += mutableListOf(line) else groups.last() += line
+        }
         // Days in page order: a date row alone ([[Nov 13th, 2026]]) starts a day and
         // becomes its heading; older rows carry the date at their start.
         val days = mutableListOf<Pair<String?, MutableList<List<Line.Note>>>>()
         for (g in groups) {
             val s = splitStamp(shownText(g.first().content))
-            val dateRow = s.day != null && s.body.isBlank() && g.size == 1
+            val dateRow = s.day != null && s.body.isBlank()
             if (s.day != null && s.day != days.lastOrNull()?.first) days += s.day to mutableListOf()
             if (days.isEmpty()) days += null to mutableListOf()
             if (!dateRow) days.last().second += g
+            else {
+                // A date row's children are that day's notes, shown one level up under the heading.
+                val kids = g.drop(1).map { it.copy(depth = it.depth - 1) }
+                kids.forEach { k -> if (k.depth == 0 || days.last().second.isEmpty()) days.last().second += listOf(k) else days.last().second[days.last().second.lastIndex] = days.last().second.last() + k }
+            }
         }
         val ordered = buildList {
             for ((day, gs) in if (look.newestFirst) days.reversed() else days) {
@@ -132,7 +145,7 @@ class ScratchpadWidget : GlanceAppWidget() {
         Column(GlanceModifier.fillMaxSize().background(Color(look.background)).cornerRadius(16.dp).padding(12.dp)) {
             if (!look.buttonsBottom) Buttons()
             val status = buildList {
-                state.pending.count { splitStamp(it.content).body.isNotBlank() }.takeIf { it > 0 }?.let { add("⏳ $it waiting") }
+                if (state.pending.isNotEmpty()) add("⏳ ${state.pending.size} waiting")
                 state.error?.let { add(it) } ?: state.lastSync?.let { add("synced ${android.text.format.DateUtils.getRelativeTimeSpanString(it)}") }
             }.joinToString(" · ")
             if (status.isNotEmpty()) Text(status, style = TextStyle(color = dim, fontSize = 11.sp), maxLines = 1)

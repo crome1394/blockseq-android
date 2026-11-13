@@ -124,7 +124,7 @@ The only part that works offline: the page **Scratchpad** in Main.
 | `scratch/ScratchpadSync.kt` | Reads the page, appends waiting notes as new top-level rows and saves with the version check (on a conflict: read again, append again, up to 4 tries, so nothing on the server is overwritten); caches rows and up to 12 thumbnails (480 px) |
 | `SyncWorker` (WorkManager) | Runs a sync as soon as there is a network after a note is added (retrying with backoff), when the app opens with notes waiting, and every 30 minutes while a widget exists |
 | `scratch/ScratchpadWidget.kt` (Glance) | Draws the copy: newest or oldest first, a heading per day and the time on a small line, encrypted rows as their own text plus a 🔒 line (the key never reaches the widget; its padlock opens the app), pictures, ⏳ for waiting notes, Sync and + buttons; tapping a row opens the page in the app. Redrawn through a revision key in each widget's state |
-| `scratch/QuickAddActivity.kt` | The +: a card over the home screen; the day's first note is queued after a date row `[[Nov 13th, 2026]]`, later notes that day plain; queued at once |
+| `scratch/QuickAddActivity.kt` | The +: a card over the home screen; queued at once for today; `withPending` puts each note as the last child of the day's top-level date row `[[Nov 13th, 2026]]` (made if missing), both when sending and when drawing waiting notes |
 | `scratch/WidgetPrefs.kt` | The look, shared by every widget: background (with alpha), text colour, order, buttons top or bottom |
 | `scratch/WidgetConfigActivity.kt` | On placing (and *Reconfigure*): `WidgetLookEditor`, also shown in Settings → Widget |
 

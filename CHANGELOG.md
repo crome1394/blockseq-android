@@ -9,6 +9,7 @@ The first version. Needs a Blockseq server with device pairing.
 
 ### Added
 
+- Widget notes go in as children of the day's date row (`[[Nov 13th, 2026]]`, made with the day's first note), so the Scratchpad reads as one block per day with that day's notes under it.
 - Journals: the pencil opens a small menu, Quick note (sticky note symbol, the card) or Edit journal (today's journal, editing its last row).
 - The block menu opens half way and can be dragged up or down from anywhere on it, not only the handle.
 - Lines join the bullets in pages, as in the web app: from a block's dot down to its last child.

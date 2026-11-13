@@ -11,11 +11,17 @@ const val SCRATCHPAD = "Scratchpad"
 
 /** One row of the Scratchpad as last synced. */
 @Serializable
-data class ScratchRow(val id: String, val content: String, val depth: Int = 0)
+data class ScratchRow(val id: String, val content: String, val depth: Int = 0, val parent: String? = null)
 
 /** A note typed on this phone that the server does not have yet. */
 @Serializable
-data class PendingNote(val id: String, val content: String, val createdAt: Long)
+data class PendingNote(
+    val id: String,
+    val content: String,
+    val createdAt: Long,
+    /** The day's date row (`[[Nov 13th, 2026]]`) the note goes under; null for a top-level row. */
+    val day: String? = null,
+)
 
 @Serializable
 data class ScratchState(
@@ -52,18 +58,12 @@ object ScratchpadStore {
     }
 
     /**
-     * Queues a note. The day's first note gets a row of its own above it with
-     * the date (`[[Nov 13th, 2026]]`, a link to the day's journal); later notes
-     * that day go in plain.
+     * Queues a note to go under today's date row (`[[Nov 13th, 2026]]`, a link
+     * to the day's journal), which is made when the day's first note is sent.
      */
     fun add(context: Context, text: String): PendingNote {
-        val stamp = "[[${journalName(LocalDate.now())}]]"
-        val note = PendingNote(java.util.UUID.randomUUID().toString(), text.trim(), System.currentTimeMillis())
-        update(context) { s ->
-            val dated = (s.rows.filter { it.depth == 0 }.map { it.content } + s.pending.map { it.content }).any { it.startsWith(stamp) }
-            val head = if (dated) emptyList() else listOf(PendingNote(java.util.UUID.randomUUID().toString(), stamp, note.createdAt))
-            s.copy(pending = s.pending + head + note)
-        }
+        val note = PendingNote(java.util.UUID.randomUUID().toString(), text.trim(), System.currentTimeMillis(), day = "[[${journalName(LocalDate.now())}]]")
+        update(context) { s -> s.copy(pending = s.pending + note) }
         return note
     }
 
@@ -71,4 +71,29 @@ object ScratchpadStore {
     fun imageDir(context: Context) = File(context.filesDir, "scratch-img").apply { mkdirs() }
 
     private fun journalName(date: LocalDate): String = app.blockseq.android.ui.journalName(date)
+}
+
+/**
+ * The page with the queued notes put in, in outline order: each note becomes
+ * the last child of its day's top-level date row, which is added at the end
+ * when the page does not have it yet. Used to send the notes and to draw them
+ * on the widget before they are sent.
+ */
+fun withPending(blocks: List<app.blockseq.android.outline.Block>, pending: List<PendingNote>): List<app.blockseq.android.outline.Block> {
+    val out = blocks.toMutableList()
+    for (p in pending) {
+        if (out.any { it.id == p.id }) continue
+        val day = p.day
+        if (day == null) { out += app.blockseq.android.outline.Block(p.id, null, p.content); continue }
+        val head = out.firstOrNull { it.parentId == null && it.content.trim() == day }
+            // Same id on every try for the same note, so a retry does not add a second date row.
+            ?: app.blockseq.android.outline.Block(java.util.UUID.nameUUIDFromBytes("day:${p.id}".toByteArray()).toString(), null, day).also { out += it }
+        val tree = hashSetOf(head.id)
+        var at = out.indexOf(head)
+        for (i in at + 1 until out.size) {
+            if (out[i].parentId in tree) { tree += out[i].id; at = i } else break
+        }
+        out.add(at + 1, app.blockseq.android.outline.Block(p.id, head.id, p.content))
+    }
+    return out
 }

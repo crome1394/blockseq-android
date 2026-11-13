@@ -52,7 +52,8 @@ object ScratchpadSync {
                     return@repeat
                 }
                 val have = blocks.map { it.id }.toHashSet()
-                blocks = blocks + state.pending.filter { it.id !in have }.map { Block(it.id, null, it.content) }
+                // Each note goes under its day's date row (made if the page has none yet).
+                blocks = withPending(blocks, state.pending.filter { it.id !in have })
                 when (val r = api.savePage(SCRATCHPAD, page.page?.version ?: 0, blocks)) {
                     is SaveResult.Saved -> {
                         cache(context, api, blocks, r.page.version, sent = state.pending.map { it.id }.toSet())
@@ -84,7 +85,7 @@ object ScratchpadSync {
         val rows = blocks.map { b ->
             val d = b.parentId?.let { (depth[it] ?: 0) + 1 } ?: 0
             depth[b.id] = d
-            ScratchRow(b.id, b.content, d)
+            ScratchRow(b.id, b.content, d, b.parentId)
         }
         thumbnails(context, api, rows)
         ScratchpadStore.update(context) { s ->
