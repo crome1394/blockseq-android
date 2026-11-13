@@ -82,7 +82,7 @@ sealed interface SaveResult {
 class ApiException(val status: Int, val code: String?, message: String) : Exception(message)
 
 /** The token was revoked or the password changed: pair again. */
-class Unpaired : Exception("This phone is no longer paired with the server.")
+class Unpaired : Exception("This phone is no longer paired with the server (it was revoked, or the server's password changed). Pair it again.")
 
 /**
  * The Blockseq HTTP API (see ARCHITECTURE.md in the server repo). Every call

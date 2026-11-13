@@ -41,7 +41,7 @@ fun PairScreen(model: AppModel) {
     var password by remember { mutableStateOf("") }
     var name by remember { mutableStateOf(model.store.deviceName.ifEmpty { "${Build.MANUFACTURER.replaceFirstChar { it.uppercase() }} ${Build.MODEL}" }) }
     var busy by remember { mutableStateOf(false) }
-    var message by remember { mutableStateOf(model.unpairedMessage) }
+    var message by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
     Column(
         Modifier.fillMaxSize().safeDrawingPadding().imePadding().verticalScroll(rememberScrollState()).padding(24.dp),
@@ -65,7 +65,8 @@ fun PairScreen(model: AppModel) {
             modifier = Modifier.fillMaxWidth().testTag("password"),
         )
         OutlinedTextField(name, { name = it }, label = { Text("Name for this phone") }, singleLine = true, modifier = Modifier.fillMaxWidth())
-        message?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+        // Why pairing is needed again (revoked, or the server's password changed), or why it failed.
+        (message ?: model.unpairedMessage)?.let { Text(it, color = MaterialTheme.colorScheme.error, modifier = Modifier.testTag("pair-message")) }
         Button(
             enabled = !busy && server.isNotBlank(),
             onClick = {

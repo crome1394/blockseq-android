@@ -68,10 +68,20 @@ fun StatusBadge(st: Status, onTap: (() -> Unit)?) {
     )
 }
 
+/**
+ * Links and tags use fixed colours: the wallpaper-based theme can pick an
+ * accent close to the text colour (a black-and-white wallpaper gives grey).
+ */
 @Composable
-fun inlineColors() = InlineColors(
-    link = MaterialTheme.colorScheme.primary,
-    tag = MaterialTheme.colorScheme.tertiary,
+fun inlineColors(): InlineColors {
+    val dark = MaterialTheme.colorScheme.background.luminanceApprox() < 0.5f
+    return inlineColorsFor(dark)
+}
+
+@Composable
+private fun inlineColorsFor(dark: Boolean) = InlineColors(
+    link = if (dark) Color(0xFF6CC9C9) else Color(0xFF1B6B6B),
+    tag = if (dark) Color(0xFFD1A2EA) else Color(0xFF7A3C9E),
     code = MaterialTheme.colorScheme.onSurfaceVariant,
     codeBackground = MaterialTheme.colorScheme.surfaceVariant,
     highlight = Color(0x66FFD54F),

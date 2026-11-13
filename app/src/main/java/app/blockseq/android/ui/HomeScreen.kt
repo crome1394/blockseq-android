@@ -131,13 +131,13 @@ private fun linkHandler(model: AppModel, onOpen: (String) -> Unit): (Target) -> 
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun <T> Loader(key: String, load: suspend () -> T, content: @Composable (T) -> Unit) {
+private fun <T> Loader(model: AppModel, key: String, load: suspend () -> T, content: @Composable (T) -> Unit) {
     var data by remember { mutableStateOf<T?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
     var refreshing by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     suspend fun fetch() {
-        runCatching { load() }.onSuccess { data = it; error = null }.onFailure { error = it.message ?: "Could not load" }
+        runCatching { load() }.onSuccess { data = it; error = null }.onFailure { error = it.message ?: "Could not load"; model.handle(it) }
     }
     LaunchedEffect(key) { fetch() }
     PullToRefreshBox(isRefreshing = refreshing, onRefresh = { scope.launch { refreshing = true; fetch(); refreshing = false } }) {
@@ -154,7 +154,7 @@ private fun <T> Loader(key: String, load: suspend () -> T, content: @Composable 
 private fun JournalsTab(model: AppModel, key: String, onOpen: (String) -> Unit) {
     val api = model.api ?: return
     val onTap = linkHandler(model, onOpen)
-    Loader(key, { api.journals(limit = 14) }) { list: List<JournalPage> ->
+    Loader(model, key, { api.journals(limit = 14) }) { list: List<JournalPage> ->
         val today = LocalDate.now()
         val todayName = journalName(today)
         val hasToday = list.any { it.page.journalDay == journalDay(today) }
@@ -199,7 +199,7 @@ private fun PagesTab(model: AppModel, key: String, onOpen: (String) -> Unit) {
     var filter by rememberSaveable { mutableStateOf("") }
     Column {
         OutlinedTextField(filter, { filter = it }, label = { Text("Filter pages") }, singleLine = true, modifier = Modifier.fillMaxWidth().padding(12.dp))
-        Loader(key, { api.pages().filter { it.journalDay == null } }) { pages: List<PageSummary> ->
+        Loader(model, key, { api.pages().filter { it.journalDay == null } }) { pages: List<PageSummary> ->
             val shown = pages.filter { filter.isBlank() || it.name.contains(filter.trim(), ignoreCase = true) }
                 .sortedWith(compareByDescending<PageSummary> { it.favorite }.thenByDescending { it.updatedAt })
             LazyColumn(Modifier.fillMaxSize().testTag("pages")) {
@@ -257,7 +257,7 @@ private fun TasksTab(model: AppModel, key: String, onOpen: (String) -> Unit) {
             Text("Show completed", style = MaterialTheme.typography.bodyMedium)
             androidx.compose.material3.Switch(checked = showDone, onCheckedChange = { showDone = it })
         }
-        Loader("$key:$bump", { api.tasks() }) { tasks: List<TaskHit> ->
+        Loader(model, "$key:$bump", { api.tasks() }) { tasks: List<TaskHit> ->
             val shown = tasks.filter { showDone || model.statuses.of(it.content)?.done != true }
             val groups = shown.groupBy { it.pageName }
             LazyColumn(Modifier.fillMaxSize().testTag("tasks")) {
