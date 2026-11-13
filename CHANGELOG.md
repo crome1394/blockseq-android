@@ -9,6 +9,7 @@ The first version. Needs a Blockseq server with device pairing.
 
 ### Added
 
+- Lines join the bullets in pages, as in the web app: from a block's dot down to its last child.
 - Search: tags have a tag symbol.
 - Widget notes: the day's first note gets a date row above it (`[[Nov 13th, 2026]]`); later notes that day go in without a stamp. The widget uses the date rows as day headings (older stamped notes still group by their stamp).
 - The widget's padlock is coloured like the app's: amber while locked, green while the app has encrypted blocks unlocked. (The widget still never decrypts.)

@@ -59,6 +59,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
@@ -283,10 +284,14 @@ fun PageScreen(model: AppModel, name: String, onOpen: (String) -> Unit, quickNot
                 return@Column
             }
             val rows = remember(editor.revision, editor) { editor.rows }
+            val lines = remember(rows) { treeLevels(rows.map { it.depth }) }
             LazyColumn(Modifier.fillMaxSize().testTag("outline"), contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = 120.dp)) {
-                items(rows, key = { it.node.id }) { row ->
+                items(rows.size, key = { rows[it].node.id }) { i ->
+                    val row = rows[i]
                     val n = row.node
-                    Row(Modifier.fillMaxWidth().padding(start = (12 + row.depth * 20).dp, end = 12.dp, top = 4.dp, bottom = 4.dp)) {
+                    val nextDepth = rows.getOrNull(i + 1)?.depth ?: -1
+                    val guide = MaterialTheme.colorScheme.outlineVariant
+                    Row(Modifier.fillMaxWidth().treeLines(row.depth, nextDepth, lines[i], guide).padding(start = (12 + row.depth * 20).dp, end = 12.dp, top = 4.dp, bottom = 4.dp)) {
                         Bullet(n, editor, numberOf(n)) { editor.toggleCollapse(n) }
                         Spacer(Modifier.width(8.dp))
                         if (n.id == editingId) {
@@ -507,4 +512,38 @@ internal fun numberOf(n: Node): Int? {
     var i = siblings.indexOf(n) - 1
     while (i >= 0 && siblings[i].props[app.blockseq.android.editor.NUMBERED] == "number") { count++; i-- }
     return count
+}
+
+/**
+ * Lines joining the bullets, as in the web app: from a block's dot down
+ * through its children, ending at the dot of the last one.
+ */
+private fun Modifier.treeLines(depth: Int, nextDepth: Int, passing: BooleanArray, color: androidx.compose.ui.graphics.Color) = drawBehind {
+    val stroke = 1.dp.toPx()
+    fun x(level: Int) = (12 + level * 20 + 8).dp.toPx()
+    val dotY = 21.dp.toPx() // row padding 4 + bullet padding 9 + half its 16
+    for (level in 0 until depth) {
+        when {
+            // A later sibling of this row's branch still comes: the line runs through.
+            passing[level] -> drawLine(color, androidx.compose.ui.geometry.Offset(x(level), 0f), androidx.compose.ui.geometry.Offset(x(level), size.height), stroke)
+            // The last child: the parent's line ends at its dot.
+            level == depth - 1 -> drawLine(color, androidx.compose.ui.geometry.Offset(x(level), 0f), androidx.compose.ui.geometry.Offset(x(level), dotY), stroke)
+        }
+    }
+    // Open children below: a line starts at this dot.
+    if (nextDepth > depth) drawLine(color, androidx.compose.ui.geometry.Offset(x(depth), dotY), androidx.compose.ui.geometry.Offset(x(depth), size.height), stroke)
+}
+
+/** For each row, which ancestor lines carry on below it (a later row one level deeper comes before the branch ends). */
+internal fun treeLevels(depths: List<Int>): List<BooleanArray> {
+    val max = (depths.maxOrNull() ?: 0) + 1
+    val flag = BooleanArray(max)
+    val out = MutableList(depths.size) { BooleanArray(0) }
+    for (i in depths.indices.reversed()) {
+        val d = depths[i]
+        out[i] = BooleanArray(max) { it < d && flag[it] }
+        for (l in d until max) flag[l] = false
+        if (d >= 1) flag[d - 1] = true
+    }
+    return out
 }
