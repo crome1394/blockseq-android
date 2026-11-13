@@ -9,7 +9,7 @@ The first version. Needs a Blockseq server with device pairing.
 
 ### Added
 
-- Code blocks have syntax colours, and long ones start folded with a *Show all* bar (Settings → Code blocks, the web app's defaults: fold above 20 lines, show 6). ``text`` shows as inline code. (code commit)
+- Code blocks have syntax colours, and long ones start folded with a *Show all* bar (Settings → Code blocks, the web app's defaults: fold above 20 lines, show 6). ``text`` shows as inline code. (`3894a75`)
 - Pictures: thumbnails in journals and pages (inline ones too), a full-screen viewer with zoom, share, save to the phone, remove from block and delete from server, and adding pictures from the camera or the phone. (`70af61a`)
 - A left pane (☰): sections, starred pages, workbooks, settings. The search field can sit at the top or bottom. A task whose status changes stays in the list for 6 seconds, so you can tap through to done or none. (`fac2d8c`)
 - Pairing with the server address and password once; the phone keeps only its own device token, encrypted with an Android Keystore key. A revoked token sends the app back to pairing with the reason. (`71bf776`, `aedf187`)
