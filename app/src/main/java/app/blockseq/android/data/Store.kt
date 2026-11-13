@@ -30,6 +30,11 @@ class Store(context: Context) {
         get() = prefs.getString("device_name", "") ?: ""
         set(v) = prefs.edit().putString("device_name", v).apply()
 
+    /** Where the search field sits on the Search tab. */
+    var searchAtBottom: Boolean
+        get() = prefs.getBoolean("search_bottom", false)
+        set(v) = prefs.edit().putBoolean("search_bottom", v).apply()
+
     /** Paired: a server address, and a token unless the server needs none. */
     val paired: Boolean get() = server.isNotEmpty() && prefs.getBoolean("paired", false)
 

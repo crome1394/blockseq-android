@@ -10,6 +10,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
@@ -20,6 +22,13 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.DrawerValue
+import androidx.compose.material3.ModalDrawerSheet
+import androidx.compose.material3.ModalNavigationDrawer
+import androidx.compose.material3.NavigationDrawerItem
+import androidx.compose.material3.rememberDrawerState
+import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.Book
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -36,6 +45,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -57,9 +67,15 @@ import app.blockseq.android.render.Target
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.withLock
 import java.time.LocalDate
 
-private enum class Tab(val label: String) { Journals("Journals"), Pages("Pages"), Search("Search"), Tasks("Tasks") }
+private enum class Tab(val label: String, val icon: androidx.compose.ui.graphics.vector.ImageVector) {
+    Journals("Journals", Icons.Filled.CalendarToday),
+    Pages("Pages", Icons.AutoMirrored.Filled.List),
+    Search("Search", Icons.Filled.Search),
+    Tasks("Tasks", Icons.Filled.CheckBox),
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -73,10 +89,19 @@ fun HomeScreen(model: AppModel, onOpen: (String) -> Unit, onSettings: () -> Unit
             if (ev["client"]?.toString()?.trim('"') != api.clientId) changes++
         }
     }
+    val drawer = rememberDrawerState(DrawerValue.Closed)
+    val scope = rememberCoroutineScope()
+    ModalNavigationDrawer(
+        drawerState = drawer,
+        drawerContent = {
+            LeftPane(model, tab, onTab = { tab = it; scope.launch { drawer.close() } }, onOpen = { scope.launch { drawer.close() }; onOpen(it) }, onSettings = { scope.launch { drawer.close() }; onSettings() }, open = drawer.isOpen)
+        },
+    ) {
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text(if (model.store.workbook == "main") "Blockseq" else model.store.workbook) },
+                navigationIcon = { IconButton(onClick = { scope.launch { drawer.open() } }, modifier = Modifier.testTag("menu")) { Icon(Icons.Filled.Menu, "Menu") } },
                 actions = { IconButton(onClick = onSettings, modifier = Modifier.testTag("settings")) { Icon(Icons.Filled.Settings, "Settings") } },
             )
         },
@@ -88,24 +113,15 @@ fun HomeScreen(model: AppModel, onOpen: (String) -> Unit, onSettings: () -> Unit
                         onClick = { tab = t },
                         label = { Text(t.label) },
                         modifier = Modifier.testTag("tab-${t.name.lowercase()}"),
-                        icon = {
-                            Icon(
-                                when (t) {
-                                    Tab.Journals -> Icons.Filled.CalendarToday
-                                    Tab.Pages -> Icons.AutoMirrored.Filled.List
-                                    Tab.Search -> Icons.Filled.Search
-                                    Tab.Tasks -> Icons.Filled.CheckBox
-                                },
-                                t.label,
-                            )
-                        },
+                        icon = { Icon(t.icon, t.label) },
                     )
                 }
             }
         },
     ) { pad ->
         val key = "${model.generation}:$changes"
-        Column(Modifier.padding(pad).fillMaxSize()) {
+        // The tab bar's space is already taken off: the keyboard padding below must not count it again.
+        Column(Modifier.padding(pad).consumeWindowInsets(pad).fillMaxSize()) {
             when (tab) {
                 Tab.Journals -> JournalsTab(model, key, onOpen)
                 Tab.Pages -> PagesTab(model, key, onOpen)
@@ -114,6 +130,60 @@ fun HomeScreen(model: AppModel, onOpen: (String) -> Unit, onSettings: () -> Unit
             }
         }
     }
+    }
+}
+
+/** The left pane: sections, starred pages, workbooks, settings. */
+@Composable
+private fun LeftPane(model: AppModel, current: Tab, onTab: (Tab) -> Unit, onOpen: (String) -> Unit, onSettings: () -> Unit, open: Boolean) {
+    var favorites by remember { mutableStateOf<List<String>>(emptyList()) }
+    var workbooks by remember { mutableStateOf<List<app.blockseq.android.data.Workbook>>(emptyList()) }
+    LaunchedEffect(open, model.generation) {
+        if (!open) return@LaunchedEffect
+        val api = model.api ?: return@LaunchedEffect
+        runCatching { api.pages() }.onSuccess { list -> favorites = list.filter { it.favorite }.map { it.name } }.onFailure(model::handle)
+        runCatching { api.workbooks() }.onSuccess { workbooks = it }
+    }
+    ModalDrawerSheet(Modifier.testTag("left-pane")) {
+        LazyColumn {
+            item {
+                Text("Blockseq", style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(start = 24.dp, top = 20.dp, bottom = 12.dp))
+            }
+            items(Tab.entries.toList(), key = { "tab:" + it.name }) { t ->
+                NavigationDrawerItem(
+                    label = { Text(t.label) }, icon = { Icon(t.icon, null) }, selected = t == current, onClick = { onTab(t) },
+                    modifier = Modifier.padding(horizontal = 12.dp).testTag("pane-${t.name.lowercase()}"),
+                )
+            }
+            item { PaneHeading("Favorites") }
+            if (favorites.isEmpty()) item {
+                Text("Star a page in the web app to see it here.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(horizontal = 28.dp, vertical = 4.dp))
+            }
+            items(favorites, key = { "fav:$it" }) { name ->
+                NavigationDrawerItem(label = { Text(name) }, icon = { Icon(Icons.Filled.Star, null) }, selected = false, onClick = { onOpen(name) }, modifier = Modifier.padding(horizontal = 12.dp))
+            }
+            if (workbooks.size > 1) {
+                item { PaneHeading("Workbooks") }
+                items(workbooks, key = { "wb:" + it.id }) { w ->
+                    NavigationDrawerItem(
+                        label = { Text(w.name) }, icon = { Icon(Icons.Filled.Book, null) },
+                        selected = model.store.workbook == w.id, onClick = { model.switchWorkbook(w.id) },
+                        modifier = Modifier.padding(horizontal = 12.dp),
+                    )
+                }
+            }
+            item {
+                HorizontalDivider(Modifier.padding(vertical = 8.dp))
+                NavigationDrawerItem(label = { Text("Settings") }, icon = { Icon(Icons.Filled.Settings, null) }, selected = false, onClick = onSettings, modifier = Modifier.padding(horizontal = 12.dp))
+            }
+        }
+    }
+}
+
+@Composable
+private fun PaneHeading(text: String) {
+    HorizontalDivider(Modifier.padding(vertical = 8.dp))
+    Text(text, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(start = 28.dp, bottom = 4.dp))
 }
 
 @Composable
@@ -227,11 +297,16 @@ private fun SearchTab(model: AppModel, onOpen: (String) -> Unit) {
     LaunchedEffect(q) {
         if (q.isBlank()) { results = SearchResults(); return@LaunchedEffect }
         delay(250)
-        runCatching { api.search(q.trim()) }.onSuccess { results = it }
+        runCatching { api.search(q.trim()) }.onSuccess { results = it }.onFailure(model::handle)
     }
-    Column {
+    // Settings → Search field chooses top or bottom (bottom is easier to reach one-handed).
+    val atBottom = model.store.searchAtBottom
+    val field = @Composable {
         OutlinedTextField(q, { q = it }, label = { Text("Search") }, singleLine = true, modifier = Modifier.fillMaxWidth().padding(12.dp).testTag("search"))
-        LazyColumn(Modifier.fillMaxSize()) {
+    }
+    Column(Modifier.fillMaxSize().then(if (atBottom) Modifier.imePadding() else Modifier)) {
+        if (!atBottom) field()
+        LazyColumn(Modifier.weight(1f), reverseLayout = false) {
             items(results.pages, key = { "p:$it" }) { name ->
                 Text(name, color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.fillMaxWidth().clickable { onOpen(name) }.padding(horizontal = 16.dp, vertical = 10.dp))
             }
@@ -242,14 +317,34 @@ private fun SearchTab(model: AppModel, onOpen: (String) -> Unit) {
                 }
             }
         }
+        if (atBottom) field()
     }
 }
+
+/** Status changes go to the server one after another (see step). */
+private val statusLock = kotlinx.coroutines.sync.Mutex()
+
+/** How long a task whose status was just changed stays in the list (as in the web app). */
+private const val LINGER_MS = 6000L
 
 @Composable
 private fun TasksTab(model: AppModel, key: String, onOpen: (String) -> Unit) {
     val api = model.api ?: return
     var showDone by rememberSaveable { mutableStateOf(false) }
     var bump by remember { mutableIntStateOf(0) }
+    // Tasks changed here a moment ago: shown with their new text until the
+    // time is up, even when they are now done or have no status, so a few
+    // taps can step through the statuses without the row vanishing.
+    val lingering = remember { mutableStateMapOf<String, Pair<TaskHit, Long>>() }
+    var lastOrder by remember { mutableStateOf<List<String>>(emptyList()) }
+    var now by remember { mutableStateOf(System.currentTimeMillis()) }
+    LaunchedEffect(lingering.size) {
+        while (lingering.isNotEmpty()) {
+            delay(500)
+            now = System.currentTimeMillis()
+            lingering.entries.removeAll { it.value.second <= now }
+        }
+    }
     val scope = rememberCoroutineScope()
     val onTap = linkHandler(model, onOpen)
     Column {
@@ -258,7 +353,17 @@ private fun TasksTab(model: AppModel, key: String, onOpen: (String) -> Unit) {
             androidx.compose.material3.Switch(checked = showDone, onCheckedChange = { showDone = it })
         }
         Loader(model, "$key:$bump", { api.tasks() }) { tasks: List<TaskHit> ->
-            val shown = tasks.filter { showDone || model.statuses.of(it.content)?.done != true }
+            val active = lingering.filterValues { it.second > now }
+            // Server order, with lingering tasks the server no longer lists kept where they were.
+            val merged = tasks.map { t -> active[t.id]?.first ?: t }.toMutableList()
+            for ((id, entry) in active) {
+                if (merged.none { it.id == id }) {
+                    val at = lastOrder.indexOf(id).takeIf { it >= 0 }?.coerceAtMost(merged.size) ?: merged.size
+                    merged.add(at, entry.first)
+                }
+            }
+            val shown = merged.filter { it.id in active || showDone || model.statuses.of(it.content)?.done != true }
+            lastOrder = merged.map { it.id }
             val groups = shown.groupBy { it.pageName }
             LazyColumn(Modifier.fillMaxSize().testTag("tasks")) {
                 groups.forEach { (page, list) ->
@@ -266,19 +371,49 @@ private fun TasksTab(model: AppModel, key: String, onOpen: (String) -> Unit) {
                         Text(page, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary, modifier = Modifier.fillMaxWidth().clickable { onOpen(page) }.padding(start = 16.dp, top = 14.dp, bottom = 4.dp))
                     }
                     items(list, key = { "t:" + it.id }) { t ->
-                        BlockContent(
-                            t.content, model.statuses, api, onTap,
-                            onStatusTap = {
-                                // Only the status changes; refused if the task changed meanwhile.
-                                val next = model.statuses.with(t.content, model.statuses.next(model.statuses.of(t.content)?.word))
-                                scope.launch { runCatching { api.putBlock(t.id, next, t.content) }; bump++ }
-                            },
-                            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp),
-                        )
+                        val st = model.statuses.of(t.content)
+                        Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp)) {
+                            if (st == null) {
+                                // No status any more: a placeholder to tap back into the cycle.
+                                Text(
+                                    "No status", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.padding(end = 6.dp, top = 4.dp).clickable { step(model, api, t, lingering, scope) { bump++ } },
+                                )
+                            }
+                            BlockContent(
+                                t.content, model.statuses, api, onTap,
+                                onStatusTap = { step(model, api, t, lingering, scope) { bump++ } },
+                                modifier = Modifier.weight(1f),
+                            )
+                        }
                     }
                 }
                 if (shown.isEmpty()) item { Text("No open tasks.", modifier = Modifier.padding(16.dp), color = MaterialTheme.colorScheme.onSurfaceVariant) }
             }
         }
+    }
+}
+
+/**
+ * Steps a task to the next status (none → first → … → last → none). Only the
+ * status changes, and the server refuses it if the task changed meanwhile.
+ */
+private fun step(
+    model: AppModel,
+    api: app.blockseq.android.data.Api,
+    t: TaskHit,
+    lingering: MutableMap<String, Pair<TaskHit, Long>>,
+    scope: kotlinx.coroutines.CoroutineScope,
+    refresh: () -> Unit,
+) {
+    val next = model.statuses.with(t.content, model.statuses.next(model.statuses.of(t.content)?.word))
+    lingering[t.id] = t.copy(content = next) to System.currentTimeMillis() + LINGER_MS
+    scope.launch {
+        // One at a time: a quick second tap expects the text the first one wrote.
+        runCatching { statusLock.withLock { api.putBlock(t.id, next, t.content) } }.onFailure {
+            lingering.remove(t.id)
+            model.handle(it)
+        }
+        refresh()
     }
 }

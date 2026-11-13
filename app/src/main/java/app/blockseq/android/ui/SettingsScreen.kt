@@ -60,6 +60,15 @@ fun SettingsScreen(model: AppModel, onBack: () -> Unit) {
                 }
             }
             HorizontalDivider()
+            Section("Search field")
+            var bottom by remember { mutableStateOf(model.store.searchAtBottom) }
+            listOf(false to "Top", true to "Bottom (easier to reach with one hand)").forEach { (value, label) ->
+                Row(Modifier.fillMaxWidth().clickable { bottom = value; model.store.searchAtBottom = value }.testTag("search-${if (value) "bottom" else "top"}"), verticalAlignment = Alignment.CenterVertically) {
+                    RadioButton(selected = bottom == value, onClick = { bottom = value; model.store.searchAtBottom = value })
+                    Text(label)
+                }
+            }
+            HorizontalDivider()
             Section("Encrypted blocks")
             when {
                 model.setup == null -> Text("No encryption password is set on the server.", color = MaterialTheme.colorScheme.onSurfaceVariant)

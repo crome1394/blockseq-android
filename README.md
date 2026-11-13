@@ -15,10 +15,13 @@ phone, straight from your own server.
 
 | | |
 |---|---|
-| **Read** | Journals, pages, links, tags, task badges, tables, code, tips and images |
+| **Read** | Journals, pages, links, tags, task badges, tables, code and tips |
+| **Pictures** | Shown as thumbnails; tap for full screen with zoom, share, save to the phone, remove or delete |
+| **Add pictures** | Take a photo or choose one from the phone, into the block you are editing |
+| **Left pane** | The ☰ menu: sections, starred pages, workbooks, settings |
 | **Edit** | Tap a block to edit; Enter splits it; indent, outdent, move, delete from a toolbar |
-| **Tasks** | Every open task in one list; tap a badge to change its status |
-| **Search** | Full-text search across the workbook |
+| **Tasks** | Every open task in one list; tap a badge to step its status (it stays a few seconds, so you can tap on) |
+| **Search** | Full-text search, with the field at the top or bottom (Settings) |
 | **Encrypted blocks** | `#Encrypted` blocks unlock with your password and decrypt on the phone |
 | **Safe saves** | The server's version check: a conflict shows *Keep mine* / *Use theirs* |
 | **Live** | Pages reload when another device saves them |

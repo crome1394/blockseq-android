@@ -20,7 +20,8 @@ Nothing is cached on the phone between launches except the pairing.
 | `editor/PageEditor.kt` | One page being edited: edits, autosave with the version check, conflicts, sealing |
 | `render/Markdown.kt` | Inline Markdown to styled, tappable text; a block split into parts |
 | `render/BlockView.kt` | Drawing one block: task badge, text, code, tables, tips, images |
-| `ui/` | Compose screens: pairing, home tabs, page, settings, unlock |
+| `render/ImageViewer.kt` | A picture full screen: zoom, share, save, remove, delete |
+| `ui/` | Compose screens: pairing, home (left pane, tabs), page, settings, unlock |
 | `app/src/test/` | Unit tests: outline format, tasks, encryption (vectors made with WebCrypto) |
 | `tools/` | A throwaway demo server with made-up notes, and a WebCrypto decrypt check |
 
@@ -55,12 +56,34 @@ The same model as the web editor:
   saves it, unless this phone has unsaved changes (the next save reports the
   conflict instead).
 - Task status taps in the task list use `PUT /api/block` with the text the
-  app last saw, so a task changed elsewhere is not overwritten.
+  app last saw, so a task changed elsewhere is not overwritten. They are sent
+  one at a time, and a changed task stays in the list for 6 seconds with its
+  new status (even done or none), as in the web app, so a few taps step
+  through the statuses.
 
 Enter in a block splits it at the cursor (inside an open code fence it adds
 a line). The keyboard can report the same edit twice from the old field
 after a split; edits from a field that is no longer the one being edited are
 ignored.
+
+## Pictures
+
+- Blocks show uploaded pictures (`../assets/…`, alone on a line or inside
+  text) as thumbnails at most 220 dp tall, decoded at up to 800 px and kept
+  in a 24 MB memory cache; a size the block asks for (`{:width …}`) is
+  ignored on the phone. Pictures are fetched with the device token.
+- Tapping one opens `ImageViewer` (decoded at up to 4096 px): pinch to zoom,
+  double-tap to reset, **Share** (a copy in the app cache, offered through a
+  `FileProvider`), **Save to phone** (MediaStore, `Pictures/Blockseq`, no
+  storage permission), **Remove from block** (only in the page editor; the
+  file stays) and **Delete from server** (`DELETE /api/assets`, after a
+  confirmation; the picture is also taken out of the block).
+- **Add a picture** (the camera icon in the page's top bar or the editing
+  toolbar): *Take a photo* (the system camera writes into the app cache, no
+  camera permission) or *Choose from phone* (the system photo picker, no
+  storage permission). The original file is uploaded with
+  `POST /api/assets` and its Markdown goes at the cursor of the block being
+  edited, or into a new block at the end.
 
 ## Encrypted blocks
 
@@ -91,5 +114,5 @@ only to `localhost`, for testing through `adb reverse`.
 ## Not done yet
 
 Offline reading, a home-screen widget or share target for quick capture,
-images and files from the phone, page history, rendering maths (shown as
+files other than pictures, page history, rendering maths (shown as
 source for now), and creating or renaming pages and workbooks.
