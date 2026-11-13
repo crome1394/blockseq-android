@@ -11,28 +11,38 @@ A native Android app for [Blockseq](https://github.com/crome1394/blockseq),
 the self-hosted, Logseq-style outliner. Read and edit your notes on your
 phone, straight from your own server.
 
+<p align="center"><img src="docs/screenshots/page.png" width="300" alt="A page with tasks, a table and code"></p>
+
 ## Features
 
 | | |
 |---|---|
-| **Read** | Journals, pages, links, tags, task badges, tables, code and tips |
-| **Pictures** | Shown as thumbnails; tap for full screen with zoom, share, save to the phone, remove or delete |
-| **Add pictures** | Take a photo or choose one from the phone, into the block you are editing |
-| **Thumb-friendly** | Action buttons along the bottom of the screen (a setting) |
-| **Left pane** | The ☰ menu: sections, starred pages, workbooks, settings, and a calendar of journal days at the bottom |
-| **Edit** | Tap a block to edit; Enter splits it; indent, outdent, move, delete from a toolbar |
-| **Block menu** | Press and hold any block: colour, heading, alignment, strikethrough, tag, timestamp, copy, share, cut, numbered list, delete |
-| **Looks like the web** | Coloured tags, row highlights, headings, numbered lists |
-| **Quick capture** | On Pages, a menu button: new page or tag, or a filter card (Pages / Journals / Starred / All); a pencil on Journals for a quick note or to edit today's journal |
-| **Code** | Syntax colours, wrapped lines, a copy button; long blocks fold, as in the web app |
-| **Tasks** | Every open task in one list; tap a badge to step its status (it stays a few seconds, so you can tap on) |
-| **Search** | Full-text search, with the field at the top or bottom (Settings) |
-| **Encrypted blocks** | `#Encrypted` blocks unlock with your password and decrypt on the phone |
-| **Safe saves** | The server's version check: a conflict shows *Keep mine* / *Use theirs* |
+| **Read** | Journals, pages, links, tags, task badges, tables, code and tips; lines join parents and children |
+| **Edit** | Tap a block to edit; Enter splits it; a toolbar to indent, move, strike through, add a rule or a picture |
+| **Move and add rows** | Press, hold and drag a block (sideways changes its depth); drop it on the bin to delete, with Undo; tap the strip above a block to add a row there |
+| **Block menu** | Press and hold: colour, heading, alignment, move, add row above/below, tag, strikethrough, timestamp, copy, share, cut, delete |
+| **Page ⋯ menu** | New row (tap, or drag to a place), take a photo, choose a picture, lock or unlock |
+| **Pictures** | Thumbnails; full screen with zoom, share, save, remove or delete; stays open when the phone turns |
+| **Assets** | Every uploaded file, as in the web app: where it is used, filter, only unused, open, download, delete |
+| **Left pane** | Sections, Assets, favorites, workbooks, Settings and a month calendar (first day of the week is a setting) |
+| **Quick capture** | A pencil on Journals for a quick note; a + on Tasks with status and due date; a filter card on Pages |
+| **Tasks** | Every open task in one list; tap a badge to step its status |
+| **Search** | Full-text search, with the field at the top or bottom |
+| **Encrypted blocks** | `#Encrypted` blocks unlock with your password and decrypt on the phone, byte-compatible with the web app |
+| **Safe saves** | The server's version check; a conflict offers *Keep mine*, *Use theirs*, or *See the differences* (changed words marked) |
 | **Live** | Pages reload when another device saves them |
 | **Paired, not logged in** | The password is used once; the phone gets its own token, revocable on the server |
-| **Workbooks** | Switch between your server's workbooks |
-| **Scratchpad widget** | Your Scratchpad page on the home screen: notes grouped by day, pictures, a + to add, works offline; encrypted rows stay locked, as in the web app; colours, transparency and button position in Settings |
+| **Scratchpad widget** | Your Scratchpad page on the home screen, grouped by day, with a + to add notes; works offline |
+
+## Screenshots
+
+| Journals | Block menu | Page ⋯ menu |
+|---|---|---|
+| <img src="docs/screenshots/journals.png" width="240" alt="Journals tab"> | <img src="docs/screenshots/block-menu.png" width="240" alt="Block menu"> | <img src="docs/screenshots/page-actions.png" width="240" alt="Page actions menu"> |
+| **Left pane** | **Assets** | **Page** |
+| <img src="docs/screenshots/menu.png" width="240" alt="Left pane with calendar"> | <img src="docs/screenshots/assets.png" width="240" alt="Assets"> | <img src="docs/screenshots/page.png" width="240" alt="A page"> |
+
+All screenshots use the made-up notes from `tools/demo-server.sh`.
 
 ## Install
 
@@ -40,7 +50,7 @@ phone, straight from your own server.
 2. Build and install the app (see [Building](#building)), or install a release APK.
 3. Open it, enter your server address and password, and tap **Pair**.
 
-The phone must reach the server, e.g. on your network or over a VPN such as Tailscale. There is no offline mode.
+The phone must reach the server, e.g. on your network or over a VPN such as Tailscale. Only the Scratchpad widget works offline.
 
 ## Building
 
