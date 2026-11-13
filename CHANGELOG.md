@@ -9,6 +9,7 @@ The first version. Needs a Blockseq server with device pairing.
 
 ### Added
 
+- Pages: the button opens a small menu (New page or tag, Filter). Filter shows a card with the text field and Pages / Journals / Starred / All; closing it shows every page again.
 - The picture viewer hides its bar after 3 seconds in landscape; tap the picture to bring it back.
 - Pictures added from the phone (camera or gallery) are set to quarter size (`{:size "quarter"}`), so they show at a quarter of their width in the web app.
 - Scratchpad notes are stamped with the date only (`[[Nov 12th, 2026]] …`); the widget still shows the time of older notes that have one.

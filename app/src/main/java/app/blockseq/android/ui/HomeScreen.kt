@@ -60,6 +60,10 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.testTag
@@ -113,6 +117,8 @@ fun HomeScreen(model: AppModel, onOpen: (String) -> Unit, onSettings: () -> Unit
     var unlocking by remember { mutableStateOf(false) }
     if (unlocking) UnlockDialog(model) { unlocking = false }
     var creating by remember { mutableStateOf(false) }
+    var pagesMenu by remember { mutableStateOf(false) }
+    var filtering by rememberSaveable { mutableStateOf(false) }
     var noting by remember { mutableStateOf(false) }
     if (noting) QuickNoteSheet(model, onOpenDay = { noting = false; onQuickNote(journalName(LocalDate.now())) }, onDone = { added -> noting = false; if (added) changes++ })
     if (creating) NewPageDialog(model, onDone = { name -> creating = false; name?.let(onOpen) })
@@ -138,7 +144,7 @@ fun HomeScreen(model: AppModel, onOpen: (String) -> Unit, onSettings: () -> Unit
         floatingActionButton = {
             when (tab) {
                 // Pages: a new page or tag. Journals: a quick note on today's journal.
-                Tab.Pages -> FloatingActionButton(onClick = { creating = true }, modifier = Modifier.testTag("fab-new")) { Icon(Icons.Filled.Add, "New page or tag") }
+                Tab.Pages -> if (!filtering) PagesFab(pagesMenu, onToggle = { pagesMenu = !pagesMenu }, onNew = { pagesMenu = false; creating = true }, onFilter = { pagesMenu = false; filtering = true })
                 Tab.Journals -> FloatingActionButton(onClick = { noting = true }, modifier = Modifier.testTag("fab-note")) { Icon(Icons.Filled.Edit, "Quick note on today's journal") }
                 else -> {}
             }
@@ -162,7 +168,7 @@ fun HomeScreen(model: AppModel, onOpen: (String) -> Unit, onSettings: () -> Unit
         Column(Modifier.padding(pad).consumeWindowInsets(pad).fillMaxSize()) {
             when (tab) {
                 Tab.Journals -> JournalsTab(model, key, onOpen)
-                Tab.Pages -> PagesTab(model, key, onOpen)
+                Tab.Pages -> PagesTab(model, key, onOpen, filtering) { filtering = false }
                 Tab.Search -> SearchTab(model, onOpen)
                 Tab.Tasks -> TasksTab(model, key, onOpen)
             }
@@ -323,25 +329,82 @@ private fun JournalCard(name: String, blocks: List<app.blockseq.android.outline.
     HorizontalDivider()
 }
 
+/**
+ * The Pages tab's button: tap for a short column of actions above it,
+ * new page or tag and filter.
+ */
 @Composable
-private fun PagesTab(model: AppModel, key: String, onOpen: (String) -> Unit) {
+private fun PagesFab(open: Boolean, onToggle: () -> Unit, onNew: () -> Unit, onFilter: () -> Unit) {
+    Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        androidx.compose.animation.AnimatedVisibility(open, enter = androidx.compose.animation.fadeIn() + androidx.compose.animation.expandVertically(expandFrom = Alignment.Bottom), exit = androidx.compose.animation.fadeOut() + androidx.compose.animation.shrinkVertically(shrinkTowards = Alignment.Bottom)) {
+            Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                FabAction("Filter", Icons.Filled.FilterList, "fab-filter", onFilter)
+                FabAction("New page or tag", Icons.Filled.Add, "fab-new", onNew)
+            }
+        }
+        FloatingActionButton(onClick = onToggle, modifier = Modifier.testTag("fab-pages")) {
+            Icon(if (open) Icons.Filled.Close else Icons.Filled.MoreVert, if (open) "Close" else "Page actions")
+        }
+    }
+}
+
+@Composable
+private fun FabAction(label: String, icon: androidx.compose.ui.graphics.vector.ImageVector, tag: String, onClick: () -> Unit) {
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        androidx.compose.material3.Surface(shape = MaterialTheme.shapes.small, tonalElevation = 3.dp, shadowElevation = 2.dp) {
+            Text(label, style = MaterialTheme.typography.labelLarge, modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp))
+        }
+        androidx.compose.material3.SmallFloatingActionButton(onClick = onClick, modifier = Modifier.testTag(tag)) { Icon(icon, label) }
+    }
+}
+
+private enum class PageKind(val label: String) { Pages("Pages"), Journals("Journals"), Starred("Starred"), All("All") }
+
+@Composable
+private fun PagesTab(model: AppModel, key: String, onOpen: (String) -> Unit, filtering: Boolean, onCloseFilter: () -> Unit) {
     val api = model.api ?: return
     var filter by rememberSaveable { mutableStateOf("") }
-    // Settings → Search and filter fields: top or bottom, like the Search tab.
+    var kind by rememberSaveable { mutableStateOf(PageKind.Pages) }
+    // Closing the filter shows every page again, so the list is never filtered out of sight.
+    LaunchedEffect(filtering) { if (!filtering) { filter = ""; kind = PageKind.Pages } }
+    // Settings → Search and filter fields: the card sits at the top or bottom, like the Search field.
     val atBottom = model.store.searchAtBottom
-    val field = @Composable {
-        OutlinedTextField(filter, { filter = it }, label = { Text("Filter pages") }, singleLine = true, modifier = Modifier.fillMaxWidth().padding(12.dp).testTag("filter"))
+    val card = @Composable {
+        val focus = remember { androidx.compose.ui.focus.FocusRequester() }
+        LaunchedEffect(Unit) { focus.requestFocus() }
+        androidx.compose.material3.ElevatedCard(Modifier.fillMaxWidth().padding(10.dp).testTag("filter-card")) {
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(start = 12.dp, top = 4.dp)) {
+                OutlinedTextField(filter, { filter = it }, placeholder = { Text("Filter") }, singleLine = true, leadingIcon = { Icon(Icons.Filled.FilterList, null) }, modifier = Modifier.weight(1f).focusRequester(focus).testTag("filter"))
+                IconButton(onClick = onCloseFilter, modifier = Modifier.testTag("filter-close")) { Icon(Icons.Filled.Close, "Close filter") }
+            }
+            Row(Modifier.padding(horizontal = 12.dp).padding(bottom = 6.dp).horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                PageKind.entries.forEach { k ->
+                    androidx.compose.material3.FilterChip(selected = kind == k, onClick = { kind = k }, label = { Text(k.label) }, modifier = Modifier.testTag("kind-${k.name.lowercase()}"))
+                }
+            }
+        }
     }
-    Column(Modifier.fillMaxSize().then(if (atBottom) Modifier.imePadding() else Modifier)) {
-        if (!atBottom) field()
+    Column(Modifier.fillMaxSize().then(if (atBottom && filtering) Modifier.imePadding() else Modifier)) {
+        if (!atBottom && filtering) card()
         Box(Modifier.weight(1f)) {
-        Loader(model, key, { api.pages().filter { it.journalDay == null } }) { pages: List<PageSummary> ->
-            val shown = pages.filter { filter.isBlank() || it.name.contains(filter.trim(), ignoreCase = true) }
-                .sortedWith(compareByDescending<PageSummary> { it.favorite }.thenByDescending { it.updatedAt })
+        Loader(model, key, { api.pages() }) { pages: List<PageSummary> ->
+            val shown = pages
+                .filter {
+                    when (kind) {
+                        PageKind.Pages -> it.journalDay == null
+                        PageKind.Journals -> it.journalDay != null
+                        PageKind.Starred -> it.favorite
+                        PageKind.All -> true
+                    }
+                }
+                .filter { filter.isBlank() || it.name.contains(filter.trim(), ignoreCase = true) }
+                .sortedWith(compareByDescending<PageSummary> { it.favorite }.thenByDescending { it.journalDay ?: 0 }.thenByDescending { it.updatedAt })
             LazyColumn(Modifier.fillMaxSize().testTag("pages")) {
+                if (shown.isEmpty()) item { Text("No pages match.", color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(16.dp)) }
                 items(shown, key = { it.name }) { p ->
                     Row(Modifier.fillMaxWidth().clickable { onOpen(p.name) }.padding(horizontal = 16.dp, vertical = 12.dp)) {
                         if (p.favorite) Icon(Icons.Filled.Star, "Starred", tint = STAR_YELLOW, modifier = Modifier.padding(end = 8.dp))
+                        else if (p.journalDay != null) Icon(Icons.Filled.CalendarMonth, "Journal", tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(end = 8.dp))
                         Column(Modifier.weight(1f)) {
                             Text(p.name, style = MaterialTheme.typography.bodyLarge)
                             val tags = p.tags.joinToString(" ") { "#$it" }
@@ -351,8 +414,8 @@ private fun PagesTab(model: AppModel, key: String, onOpen: (String) -> Unit) {
                 }
             }
         }
-            }
-        if (atBottom) field()
+        }
+        if (atBottom && filtering) card()
     }
 }
 

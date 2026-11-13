@@ -23,7 +23,7 @@ phone, straight from your own server.
 | **Edit** | Tap a block to edit; Enter splits it; indent, outdent, move, delete from a toolbar |
 | **Block menu** | Press and hold any block: colour, heading, alignment, strikethrough, tag, timestamp, copy, share, cut, numbered list, delete |
 | **Looks like the web** | Coloured tags, row highlights, headings, numbered lists |
-| **Quick capture** | A + button for new pages or tags; a pencil for a quick note on today's journal |
+| **Quick capture** | On Pages, a menu button: new page or tag, or a filter card (Pages / Journals / Starred / All); a pencil for a quick note on today's journal |
 | **Code** | Syntax colours, wrapped lines, a copy button; long blocks fold, as in the web app |
 | **Tasks** | Every open task in one list; tap a badge to step its status (it stays a few seconds, so you can tap on) |
 | **Search** | Full-text search, with the field at the top or bottom (Settings) |
