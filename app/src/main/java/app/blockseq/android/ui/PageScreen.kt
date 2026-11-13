@@ -118,6 +118,7 @@ import app.blockseq.android.outline.Node
 import app.blockseq.android.render.BlockContent
 import app.blockseq.android.render.Target
 import kotlinx.coroutines.flow.catch
+import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.jsonPrimitive
 
@@ -139,7 +140,8 @@ fun PageScreen(model: AppModel, name: String, onOpen: (String) -> Unit, quickNot
             if (type == "resync" || (page != null && page.equals(name, true) && client != api.clientId)) editor.remoteChanged()
         }
     }
-    DisposableEffect(editor) { onDispose { scope.launch { editor.save() } } }
+    // The screen's own scope is cancelled as it leaves, so the last save runs in the app's.
+    DisposableEffect(editor) { onDispose { model.viewModelScope.launch { editor.save() } } }
 
     var editing by remember(editor) { mutableStateOf<Node?>(null) }
     val editingId = editing?.id

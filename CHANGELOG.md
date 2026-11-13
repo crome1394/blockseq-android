@@ -9,6 +9,7 @@ The first version. Needs a Blockseq server with device pairing.
 
 ### Added
 
+- Fixed: leaving a page (Back) less than a second after typing could drop the change: the last save was started on the page's own task just as it was being stopped.
 - Fixed: saving read and sealed the page on a background thread while typing changed it on the main one (a possible crash, or a save missing the latest keystroke).
 - Fixed: a change made while the previous save was on its way could be marked saved and never sent.
 - Fixed: typing while a save was on its way cancelled it on the phone after the server had stored it, so the next save reported a conflict with the phone's own change.

@@ -515,7 +515,8 @@ class PageEditor(
         if (saveAgain) {
             saveAgain = false
             dirty = true
-            scheduleSave(0)
+            // Directly, not via [scope]: it may be gone (the last save as the page closes).
+            save()
         }
     }
 
