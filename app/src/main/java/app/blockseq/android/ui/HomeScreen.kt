@@ -22,6 +22,7 @@ import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.CheckBox
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
@@ -59,6 +60,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
@@ -554,7 +556,10 @@ private fun QuickNoteSheet(model: AppModel, onOpenDay: () -> Unit, onDone: (adde
     val today = journalName(LocalDate.now())
     androidx.compose.material3.ModalBottomSheet(onDismissRequest = { if (!busy) onDone(false) }, sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(bottom = 16.dp).imePadding()) {
-            Text("Quick note · $today", style = MaterialTheme.typography.titleMedium)
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Text("Quick note · $today", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+                IconButton(onClick = { if (!busy) onDone(false) }, modifier = Modifier.testTag("quick-note-close")) { Icon(Icons.Filled.Close, "Close") }
+            }
             OutlinedTextField(
                 text, { text = it }, placeholder = { Text("Write a note…") }, minLines = 3, maxLines = 8,
                 modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp).focusRequester(focus).testTag("quick-note"),

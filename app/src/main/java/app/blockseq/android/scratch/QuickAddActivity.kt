@@ -25,6 +25,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.unit.dp
@@ -56,7 +57,10 @@ class QuickAddActivity : ComponentActivity() {
                 }
                 ModalBottomSheet(onDismissRequest = { finish() }, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
                     Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(bottom = 16.dp).imePadding()) {
-                        Text("Add to Scratchpad", style = MaterialTheme.typography.titleMedium)
+                        Row(Modifier.fillMaxWidth(), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                            Text("Add to Scratchpad", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+                            androidx.compose.material3.IconButton(onClick = { finish() }) { androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.Filled.Close, "Close") }
+                        }
                         OutlinedTextField(
                             text, { text = it }, placeholder = { Text("Write a note…") }, minLines = 3, maxLines = 10,
                             modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp).focusRequester(focus),

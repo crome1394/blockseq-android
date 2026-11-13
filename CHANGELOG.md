@@ -9,8 +9,9 @@ The first version. Needs a Blockseq server with device pairing.
 
 ### Added
 
-- Widget: notes grouped under a heading for each day, times without seconds; a padlock that hides the notes until tapped again; the buttons at the top or bottom; a Solid / See-through / Transparent background. The look is now one setting for every widget. (`WIDGET`)
-- **Strikethrough**: in the block menu (the first line; status and tags stay outside) and on the editing toolbar (the selection, or the line the cursor is on), stored as `~~text~~` like the web app.
+- The quick-note cards (widget + and journal pencil) have an X to close them. (`QX`)
+- Widget: notes grouped under a heading for each day, times without seconds; a padlock that hides the notes until tapped again; the buttons at the top or bottom; a Solid / See-through / Transparent background. The look is now one setting for every widget. (`c17696b`)
+- **Strikethrough**: in the block menu (the first line; status and tags stay outside) and on the editing toolbar (the selection, or the line the cursor is on), stored as `~~text~~` like the web app. (`38a6eb0`)
 - **Scratchpad widget**: the Main workbook's Scratchpad page on the home screen, newest first (or oldest), with date stamps, pictures and a + card to add a note. Notes are kept on the phone at once and sent when there is a connection; a Sync button too. Background colour, transparency, text colour and order are set per widget. Settings → Scratchpad widget can place it and sync. (`07e23a5`)
 - Journals: a calendar icon beside each date, row colours and other properties in the previews, encrypted children once unlocked, and a quick-note card on the pencil button that adds to the last row of today. The padlock is on the home screen too, and the left pane shows Connected / Offline and when the app last synced. (`c48b860`)
 - Coloured tags (the web's colours), row highlights, alignment, auto headings and numbered lists; the full block menu on press and hold; code blocks wrap and have a copy button. (`cd7f856`)
