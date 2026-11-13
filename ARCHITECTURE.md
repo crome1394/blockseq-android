@@ -87,14 +87,22 @@ ignored.
 
 ## Reading and tagging
 
-- Code blocks are coloured by `render/Highlight.kt` (in-house: keywords,
+- Code blocks wrap, have a copy button, and are coloured by `render/Highlight.kt` (in-house: keywords,
   strings, comments, numbers, type names) and long ones fold like the web
   app (Settings → Code blocks; those settings live in each browser, so the
   phone keeps its own copy with the same defaults).
 - Linked references start each group with an icon that opens the page they
   live on (a calendar for a journal). Property lines the web app hides are
   never shown.
-- Press and hold any block for `TagDialog`: the workbook's tags (from
+- Tags are coloured with the web app's `tagHue` (the same FNV-style hash,
+  checked against the web's values in a unit test). Row highlights, alignment,
+  auto headings and numbered lists render from the same properties the web app
+  stores (`background-color::`, `text-align::`, `heading::`,
+  `logseq.order-list-type::`).
+- Press and hold any block for `BlockMenu`, a bottom sheet: colours,
+  headings, alignment, tag (`TagDialog`), timestamp, copy ref / URL /
+  Markdown / plain text, share, cut, numbered list, delete.
+- In `TagDialog`: the workbook's tags (from
   `GET /api/pages`, most used first, not `#task`), filtered as you type, or a
   new one. `PageEditor.addTag` puts it at the end of the first line
   (`#[[two words]]` when needed; after the text of a block that starts with

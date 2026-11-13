@@ -9,6 +9,8 @@ The first version. Needs a Blockseq server with device pairing.
 
 ### Added
 
+- Coloured tags (the web's colours), row highlights, alignment, auto headings and numbered lists; the full block menu on press and hold; code blocks wrap and have a copy button. (`cd7f856`)
+- A + button on Pages for a new page or tag, a pencil on Journals for a quick note on today's journal; the Pages filter follows the top/bottom setting. (`e07b856`)
 - Press and hold any block to add a tag: the workbook's tags, filtered as you type, or a new one. (`a82d7c9`)
 - Take a photo works on phones whose camera app refuses capture requests (it crashed before): a built-in camera stands in. Settings → Controls at the bottom, a coloured padlock (amber locked, green open), yellow stars. (`46d6358`, `1c2a044`)
 - Linked references have an icon on the left that opens the page they live on (a calendar for a journal), apart from the links in the text. Hidden property lines such as `background-color::` are no longer shown. (`6fead46`)

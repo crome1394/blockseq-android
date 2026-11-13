@@ -21,8 +21,10 @@ phone, straight from your own server.
 | **Thumb-friendly** | Action buttons along the bottom of the screen (a setting) |
 | **Left pane** | The ☰ menu: sections, starred pages, workbooks, settings |
 | **Edit** | Tap a block to edit; Enter splits it; indent, outdent, move, delete from a toolbar |
-| **Tags** | Press and hold any block to pick a tag or create one |
-| **Code** | Syntax colours; long blocks fold, as in the web app |
+| **Block menu** | Press and hold any block: colour, heading, alignment, tag, timestamp, copy, share, cut, numbered list, delete |
+| **Looks like the web** | Coloured tags, row highlights, headings, numbered lists |
+| **Quick capture** | A + button for new pages or tags; a pencil for a quick note on today's journal |
+| **Code** | Syntax colours, wrapped lines, a copy button; long blocks fold, as in the web app |
 | **Tasks** | Every open task in one list; tap a badge to step its status (it stays a few seconds, so you can tap on) |
 | **Search** | Full-text search, with the field at the top or bottom (Settings) |
 | **Encrypted blocks** | `#Encrypted` blocks unlock with your password and decrypt on the phone |
