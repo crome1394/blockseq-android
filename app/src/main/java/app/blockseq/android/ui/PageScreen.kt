@@ -654,6 +654,8 @@ private fun EditBar(
 
 @Composable
 private fun ConflictBar(c: Conflict, editor: PageEditor) {
+    var comparing by remember(c) { mutableStateOf(false) }
+    if (comparing) ConflictDiffDialog(editor) { comparing = false }
     Surface(color = MaterialTheme.colorScheme.errorContainer, modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(
@@ -666,8 +668,75 @@ private fun ConflictBar(c: Conflict, editor: PageEditor) {
                 else OutlinedButton(onClick = editor::useTheirs, modifier = Modifier.testTag("use-theirs")) { Text("Use theirs") }
                 Button(onClick = editor::keepMine, modifier = Modifier.testTag("keep-mine")) { Text("Keep mine") }
             }
+            if (c is Conflict.Changed) androidx.compose.material3.TextButton(onClick = { comparing = true }, modifier = Modifier.testTag("see-diff")) {
+                Text("See the differences", color = MaterialTheme.colorScheme.onErrorContainer)
+            }
         }
     }
+}
+
+/**
+ * The two versions side by side as one list: lines only on the other device
+ * in red with −, lines only on this phone in green with +, the rest dimmed.
+ * Long unchanged stretches fold to their edges.
+ */
+@Composable
+private fun ConflictDiffDialog(editor: PageEditor, onClose: () -> Unit) {
+    val lines = remember(editor.conflict, editor.revision) { editor.conflictDiff() } ?: run { onClose(); return }
+    val dark = androidx.compose.foundation.isSystemInDarkTheme()
+    val red = if (dark) Color(0xFFFF8A80) else Color(0xFFB3261E)
+    val green = if (dark) Color(0xFF81C784) else Color(0xFF1B5E20)
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = onClose,
+        title = { Text("Differences") },
+        text = {
+            Column {
+                Text("− only on the other device   + only on this phone", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Spacer(Modifier.height(8.dp))
+                if (lines.none { it.kind != app.blockseq.android.editor.DiffLine.Kind.Same }) Text("The text is the same; only hidden details (such as properties or folding) differ.")
+                androidx.compose.foundation.lazy.LazyColumn(Modifier.testTag("diff-list")) {
+                    val shown = foldSame(lines)
+                    items(shown.size) { i ->
+                        val l = shown[i]
+                        val (mark, color, bg) = when (l?.kind) {
+                            null -> Triple(" ", MaterialTheme.colorScheme.onSurfaceVariant, Color.Transparent)
+                            app.blockseq.android.editor.DiffLine.Kind.Theirs -> Triple("−", red, red.copy(alpha = 0.12f))
+                            app.blockseq.android.editor.DiffLine.Kind.Mine -> Triple("+", green, green.copy(alpha = 0.12f))
+                            else -> Triple(" ", MaterialTheme.colorScheme.onSurfaceVariant, Color.Transparent)
+                        }
+                        Text(
+                            if (l == null) "  ⋯" else "$mark ${l.text}",
+                            color = color,
+                            style = MaterialTheme.typography.bodySmall.copy(fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace),
+                            modifier = Modifier.fillMaxWidth().background(bg).padding(horizontal = 4.dp, vertical = 1.dp),
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = { androidx.compose.material3.TextButton(onClick = { onClose(); editor.keepMine() }) { Text("Keep mine") } },
+        dismissButton = {
+            Row {
+                androidx.compose.material3.TextButton(onClick = onClose) { Text("Close") }
+                androidx.compose.material3.TextButton(onClick = { onClose(); editor.useTheirs() }) { Text("Use theirs") }
+            }
+        },
+    )
+}
+
+/** Unchanged runs longer than 5 lines keep 2 at each end; null marks the fold. */
+private fun foldSame(lines: List<app.blockseq.android.editor.DiffLine>): List<app.blockseq.android.editor.DiffLine?> {
+    val out = mutableListOf<app.blockseq.android.editor.DiffLine?>()
+    var i = 0
+    while (i < lines.size) {
+        if (lines[i].kind != app.blockseq.android.editor.DiffLine.Kind.Same) { out += lines[i]; i++; continue }
+        var j = i
+        while (j < lines.size && lines[j].kind == app.blockseq.android.editor.DiffLine.Kind.Same) j++
+        val run = lines.subList(i, j)
+        if (run.size > 5) { out += run.take(2); out += null; out += run.takeLast(2) } else out += run
+        i = j
+    }
+    return out
 }
 
 /**

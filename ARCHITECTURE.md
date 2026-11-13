@@ -49,6 +49,9 @@ The same model as the web editor:
 - Edits schedule a save 800 ms later; leaving the page saves at once.
 - `409` with the other version: the page shows *Keep mine* (saved again with
   `overwrite`, the server keeps theirs in the page history) or *Use theirs*.
+  *See the differences* lists the two versions line by line (`editor/Diff.kt`:
+  − only on the other device, + only on this phone; long unchanged runs fold;
+  children of encrypted blocks are one 🔒 line, as theirs are still sealed).
   `409 deleted`: *Leave it deleted* or *Keep mine*. `409 foreign_ids`: pasted
   blocks get new ids and the save runs again.
 - A failed save retries after 4 s.

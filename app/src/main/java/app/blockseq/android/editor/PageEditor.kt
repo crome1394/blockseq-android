@@ -495,6 +495,12 @@ class PageEditor(
         apply(c.blocks, c.version)
     }
 
+    /** What differs between the other device's version and this phone's, line by line. */
+    fun conflictDiff(): List<DiffLine>? {
+        val c = conflict as? Conflict.Changed ?: return null
+        return diffLines(outlineLines(app.blockseq.android.outline.buildTree(c.blocks)), outlineLines(root))
+    }
+
     /** This phone's version wins; the server keeps theirs in the page history. */
     fun keepMine() {
         val c = conflict ?: return
