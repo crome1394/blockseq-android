@@ -218,7 +218,9 @@ fun PageScreen(model: AppModel, name: String, onOpen: (String) -> Unit, quickNot
         PictureButton(onCamera = ::openCamera, onGallery = ::choosePhoto, tag = "page-picture")
         if (model.setup != null) LockButton(model.key != null, onLock = { stopEdit(); model.lock() }, onUnlock = { unlocking = true })
     }
+    val snackbar = remember { androidx.compose.material3.SnackbarHostState() }
     Scaffold(
+        snackbarHost = { androidx.compose.material3.SnackbarHost(snackbar) },
         topBar = {
             TopAppBar(
                 title = {
@@ -327,7 +329,19 @@ fun PageScreen(model: AppModel, name: String, onOpen: (String) -> Unit, quickNot
             }
             var drag by remember(editor) { mutableStateOf<Drag?>(null) }
             var gapPressed by remember(editor) { mutableStateOf<String?>(null) }
-            val drop = drag?.let { dropFor(it) }
+            // The bin, shown in the bottom-right corner while a block is lifted.
+            val binR = with(density) { 28.dp.toPx() }
+            val binM = with(density) { 20.dp.toPx() }
+            fun overBin(d: Drag): Boolean {
+                val v = listState.layoutInfo.viewportSize
+                val c = Offset(v.width - binM - binR, v.height - binM - binR)
+                return (Offset(d.fingerX, d.fingerY) - c).getDistance() < binR * 2f
+            }
+            val onBin = drag?.let { overBin(it) } == true
+            LaunchedEffect(onBin) {
+                if (drag != null) view.performHapticFeedback(if (onBin) HapticFeedbackConstants.LONG_PRESS else HapticFeedbackConstants.CLOCK_TICK)
+            }
+            val drop = drag?.takeUnless { onBin }?.let { dropFor(it) }
             // A light tick each time the landing place changes.
             var lastDrop by remember { mutableStateOf<Pair<String?, Int>?>(null) }
             LaunchedEffect(drop?.prev?.node?.id, drop?.depth, drag != null) {
@@ -342,6 +356,7 @@ fun PageScreen(model: AppModel, name: String, onOpen: (String) -> Unit, quickNot
                     val h = listState.layoutInfo.viewportSize.height
                     val edge = with(density) { 72.dp.toPx() }
                     val by = when {
+                        overBin(d) -> 0f
                         d.fingerY < edge -> -(edge - d.fingerY) / 4
                         d.fingerY > h - edge -> (d.fingerY - (h - edge)) / 4
                         else -> 0f
@@ -387,7 +402,7 @@ fun PageScreen(model: AppModel, name: String, onOpen: (String) -> Unit, quickNot
                     view.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
                     var moved = false
                     var released = false
-                    drag = Drag(row.node, row.depth, held.position.y - item.offset, held.position.y, 0f)
+                    drag = Drag(row.node, row.depth, held.position.y - item.offset, held.position.y, 0f, held.position.x)
                     try {
                         while (true) {
                             val ev = awaitPointerEvent(PointerEventPass.Initial)
@@ -396,10 +411,25 @@ fun PageScreen(model: AppModel, name: String, onOpen: (String) -> Unit, quickNot
                             if (!ch.pressed) { released = true; break }
                             val off = ch.position - held.position
                             if (!moved && off.getDistance() > viewConfiguration.touchSlop) moved = true
-                            if (moved) drag = drag?.copy(fingerY = ch.position.y, dx = off.x)
+                            if (moved) drag = drag?.copy(fingerY = ch.position.y, dx = off.x, fingerX = ch.position.x)
                         }
                         val d = drag
                         if (released && !moved) menuFor = row.node
+                        else if (released && d != null && overBin(d)) {
+                            // Dropped on the bin: deleted with its children, with Undo for a few seconds.
+                            val at = editor.placeOf(d.node)
+                            editor.delete(d.node)
+                            view.performHapticFeedback(if (android.os.Build.VERSION.SDK_INT >= 30) HapticFeedbackConstants.CONFIRM else HapticFeedbackConstants.LONG_PRESS)
+                            scope.launch { editor.save() }
+                            scope.launch {
+                                snackbar.currentSnackbarData?.dismiss()
+                                val r = snackbar.showSnackbar("Block deleted", actionLabel = "Undo", duration = androidx.compose.material3.SnackbarDuration.Long)
+                                if (r == androidx.compose.material3.SnackbarResult.ActionPerformed) {
+                                    editor.restore(d.node, at)
+                                    editor.save()
+                                }
+                            }
+                        }
                         else if (released && d != null) {
                             val to = dropFor(d)
                             if (to != null && editor.moveAfter(d.node, to.prev?.node, to.prev?.depth ?: -1, to.depth)) {
@@ -423,6 +453,7 @@ fun PageScreen(model: AppModel, name: String, onOpen: (String) -> Unit, quickNot
                             val at = listState.layoutInfo.visibleItemsInfo.firstOrNull { it.key == n.id }?.offset ?: 0
                             translationY = d.fingerY - d.grabY - at
                             translationX = d.dx
+                            alpha = if (onBin) 0.4f else 1f
                             shadowElevation = 12.dp.toPx()
                             shape = androidx.compose.foundation.shape.RoundedCornerShape(8.dp)
                             clip = true
@@ -507,6 +538,18 @@ fun PageScreen(model: AppModel, name: String, onOpen: (String) -> Unit, quickNot
                     }
                 }
             }
+            if (drag != null) {
+                val grow by androidx.compose.animation.core.animateFloatAsState(if (onBin) 1.25f else 1f, label = "bin")
+                Box(
+                    Modifier.align(Alignment.BottomEnd).padding(20.dp).size(56.dp)
+                        .graphicsLayer { scaleX = grow; scaleY = grow }
+                        .background(if (onBin) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.surfaceContainerHighest, CircleShape)
+                        .testTag("drag-bin"),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(Icons.Filled.Delete, "Drop here to delete", tint = if (onBin) MaterialTheme.colorScheme.onError else MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
             // The line where the dragged block would land, indented to its new depth.
             drop?.let { to ->
                 val color = MaterialTheme.colorScheme.primary
@@ -536,7 +579,7 @@ fun PageScreen(model: AppModel, name: String, onOpen: (String) -> Unit, quickNot
 }
 
 /** A block being dragged: where the finger is (in the list) and how far sideways it went. */
-private data class Drag(val node: Node, val depth: Int, val grabY: Float, val fingerY: Float, val dx: Float)
+private data class Drag(val node: Node, val depth: Int, val grabY: Float, val fingerY: Float, val dx: Float, val fingerX: Float)
 
 /** Where it would land: after [prev] (none: first on the page), at [depth]; [lineY] in the list. */
 private data class Drop(val prev: OutlineRow?, val depth: Int, val lineY: Float)

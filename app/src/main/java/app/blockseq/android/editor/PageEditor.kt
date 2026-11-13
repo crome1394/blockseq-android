@@ -305,6 +305,18 @@ class PageEditor(
         changed()
     }
 
+    /** Where a block sits, so a delete can be undone: its parent and place among the siblings. */
+    fun placeOf(n: Node): Pair<Node, Int> { val p = n.parent ?: root; return p to p.children.indexOf(n) }
+
+    /** Puts a deleted block back where [placeOf] said it was (the empty row a delete may add is dropped). */
+    fun restore(n: Node, at: Pair<Node, Int>) {
+        val (parent, i) = at
+        root.children.singleOrNull()?.takeIf { it !== n && it.content.isBlank() && it.children.isEmpty() && parent === root }?.let { root.children.clear() }
+        n.parent = parent
+        parent.children.add(i.coerceIn(0, parent.children.size), n)
+        changed()
+    }
+
     /** Removes a block and everything under it. Returns the block above, to edit next. */
     fun delete(n: Node): Node? {
         val list = rows.map { it.node }

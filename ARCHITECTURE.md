@@ -103,7 +103,10 @@ ignored.
 - Moving and adding rows: press and hold a block, then drag it up or down
   (sideways changes its depth; its children come along; the page scrolls at
   the edges; `depthRange` and `placeNode` in `editor/Reorder.kt` decide where
-  it may land). Let go without moving for the menu. A short tap on the thin
+  it may land). While a block is lifted a bin shows in the bottom-right
+  corner: dropping on it deletes the block and its children, with *Undo*
+  (10 s) putting it back in place (`placeOf` / `restore`). Let go without
+  moving for the menu. A short tap on the thin
   strip above a block adds a row there; the list catches it before the rows,
   whose touch areas Compose stretches to 48 dp. Haptics: a buzz on lift, a
   tick when the landing place changes, a confirm (or reject) on drop.
