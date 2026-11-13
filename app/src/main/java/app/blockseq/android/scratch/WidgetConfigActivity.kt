@@ -99,7 +99,6 @@ fun WidgetLookEditor(look: WidgetLookPrefs, onChange: (WidgetLookPrefs) -> Unit)
                 val head = @Composable { Row { Text("Scratchpad", color = fg, fontSize = 16.sp, modifier = Modifier.weight(1f)); Text("🔓 ⟳ +", color = fg) } }
                 if (!look.buttonsBottom) head()
                 Text("Nov 12th, 2026", color = fg, fontSize = 12.sp)
-                Text("21:48", color = fg.copy(alpha = 0.65f), fontSize = 11.sp)
                 Text("Pick up stakes and twine", color = fg, fontSize = 14.sp, modifier = Modifier.weight(1f))
                 if (look.buttonsBottom) head()
             }

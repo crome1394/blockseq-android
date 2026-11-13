@@ -9,6 +9,7 @@ The first version. Needs a Blockseq server with device pairing.
 
 ### Added
 
+- Scratchpad notes are stamped with the date only (`[[Nov 12th, 2026]] …`); the widget still shows the time of older notes that have one.
 - ``code`` (double graves) has a copy button after it, as in the web app.
 - Opening the app sends Scratchpad notes still waiting (Android can hold the widget's retry back for minutes). (`c38769b`)
 - A month calendar in the left pane, as in the web app: dots on days whose journal has notes, today ringed, tap a day to open it. (`2f3b18b`)

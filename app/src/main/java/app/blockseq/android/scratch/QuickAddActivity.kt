@@ -34,7 +34,7 @@ import kotlinx.coroutines.launch
 
 /**
  * The widget's +: a card over the home screen with a text box. The note is
- * date-stamped and kept on the phone at once (so it works offline), shown on
+ * stamped with the date and kept on the phone at once (so it works offline), shown on
  * the widget, and sent to the Scratchpad page when there is a connection.
  */
 class QuickAddActivity : ComponentActivity() {

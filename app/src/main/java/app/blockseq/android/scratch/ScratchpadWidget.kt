@@ -98,7 +98,7 @@ class ScratchpadWidget : GlanceAppWidget() {
         val ordered = buildList {
             var day: String? = null
             for (g in if (look.newestFirst) groups.reversed() else groups) {
-                val d = splitStamp(shownText(g.first().content)).first?.substringBeforeLast(' ')
+                val d = splitStamp(shownText(g.first().content)).day
                 if (d != null && d != day) { add(Line.Day(d)); day = d }
                 addAll(g)
             }
@@ -145,8 +145,7 @@ class ScratchpadWidget : GlanceAppWidget() {
 
     @Composable
     private fun RowContent(content: String, waiting: Boolean, images: File, fg: ColorProvider, dim: ColorProvider) {
-        val (stamp, body) = splitStamp(shownText(content))
-        val time = stamp?.substringAfterLast(' ')
+        val (_, time, body) = splitStamp(shownText(content))
         Column(GlanceModifier.fillMaxWidth()) {
             if (time != null || waiting) Text(listOfNotNull(time, if (waiting) "⏳ not sent yet" else null).joinToString(" · "), style = TextStyle(color = dim, fontSize = 11.sp))
             parts(body).forEach { part ->
@@ -179,13 +178,15 @@ class ScratchpadWidget : GlanceAppWidget() {
             }
         }
 
-        // Seconds, if a stamp has them, are dropped.
-        private val STAMP = Regex("""^\[\[([^\]]+)\]\]\s+(\d{1,2}:\d{2})(?::\d{2})?\s*""")
+        // A day, then a time if the note has one (older notes); seconds are dropped.
+        private val STAMP = Regex("""^\[\[([A-Z][a-z]{2} \d{1,2}(?:st|nd|rd|th), \d{4})\]\]\s*(?:(\d{1,2}:\d{2})(?::\d{2})?\s*)?""")
 
-        /** "[[Nov 12th, 2026]] 21:48:05 Buy stakes" → ("Nov 12th, 2026 21:48", "Buy stakes"). */
-        fun splitStamp(text: String): Pair<String?, String> {
-            val m = STAMP.find(text) ?: return null to text
-            return "${m.groupValues[1]} ${m.groupValues[2]}" to text.substring(m.range.last + 1)
+        data class Stamp(val day: String?, val time: String?, val body: String)
+
+        /** "[[Nov 12th, 2026]] 21:48:05 Buy stakes" → ("Nov 12th, 2026", "21:48", "Buy stakes"); the time is optional. */
+        fun splitStamp(text: String): Stamp {
+            val m = STAMP.find(text) ?: return Stamp(null, null, text)
+            return Stamp(m.groupValues[1], m.groupValues[2].ifEmpty { null }, text.substring(m.range.last + 1))
         }
 
         /** Markdown made readable as plain widget text. */

@@ -5,8 +5,6 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import java.io.File
 import java.time.LocalDate
-import java.time.LocalTime
-import java.time.format.DateTimeFormatter
 
 /** The page the widget shows and adds to, always in the Main workbook. */
 const val SCRATCHPAD = "Scratchpad"
@@ -53,9 +51,9 @@ object ScratchpadStore {
         next
     }
 
-    /** Queues a note, date-stamped now ("[[Nov 12th, 2026]] 21:48 …", the web app's timestamp). */
+    /** Queues a note stamped with today's date ("[[Nov 12th, 2026]] …", a link to the day's journal). */
     fun add(context: Context, text: String): PendingNote {
-        val stamp = "[[${journalName(LocalDate.now())}]] ${LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm"))}"
+        val stamp = "[[${journalName(LocalDate.now())}]]"
         val note = PendingNote(java.util.UUID.randomUUID().toString(), "$stamp ${text.trim()}", System.currentTimeMillis())
         update(context) { it.copy(pending = it.pending + note) }
         return note
