@@ -566,7 +566,8 @@ fun PageScreen(model: AppModel, name: String, onOpen: (String) -> Unit, quickNot
                 toBox = { c, p -> boxCoords?.localPositionOf(c, p) ?: p },
                 onCamera = { pageMenu = false; openCamera() },
                 onGallery = { pageMenu = false; choosePhoto() },
-                onLock = { pageMenu = false; stopEdit(); model.lock() },
+                // Save first: encrypted children are sealed with the key, which Lock wipes.
+                onLock = { pageMenu = false; editing = null; scope.launch { editor.save(); model.lock() } },
                 onUnlock = { pageMenu = false; unlocking = true },
                 modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp),
             )

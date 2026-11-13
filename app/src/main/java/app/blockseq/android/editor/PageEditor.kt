@@ -163,6 +163,9 @@ class PageEditor(
 
     /** Before saving: encrypt the children of every #Encrypted block, innermost first. */
     private fun sealSecrets() {
+        // Lock zeroes the key in place, and this editor may still hold it (a save queued
+        // or retrying): never encrypt with an all-zero key.
+        val k = key?.takeIf { kk -> kk.any { it != 0.toByte() } }
         val roots = allNodes(root).filter { isEncryptedRoot(it) }.sortedByDescending { depthOf(it) }
         for (r in roots) {
             val tagged = ENCRYPTED_TAG.containsMatchIn(r.content)
@@ -172,11 +175,16 @@ class PageEditor(
                 r.unsealed = false
                 continue
             }
-            if (!tagged || key == null) continue
+            if (!tagged) continue
             if (r.encryptedBlob != null && !r.unsealed) continue
+            if (k == null) {
+                // Unsealed but the key is gone: a change made before Lock cannot be sealed.
+                if (r.unsealed && r.children.joinToString("\n") { subtreeMarkdown(it) } != r.sealedText) throw LockedOut()
+                continue
+            }
             val text = r.children.joinToString("\n") { subtreeMarkdown(it) }
             if (r.encryptedBlob == null || text != r.sealedText) {
-                r.props[ENCRYPTED] = BlockCrypto.encrypt(key, text)
+                r.props[ENCRYPTED] = BlockCrypto.encrypt(k, text)
                 r.sealedText = text
             }
             r.unsealed = true
@@ -486,6 +494,9 @@ class PageEditor(
             }
         } catch (e: Unpaired) {
             onUnpaired(e)
+        } catch (e: LockedOut) {
+            // Retrying cannot help: the key is gone.
+            error = e.message
         } catch (e: Exception) {
             error = e.message ?: "Could not save."
             scheduleSave(4000)
@@ -534,6 +545,9 @@ class PageEditor(
         load()
     }
 }
+
+/** A change inside an #Encrypted block was still unsaved when the key was dropped. */
+class LockedOut : IllegalStateException("Locked before a change to an encrypted block was saved. Unlock and make the change again.")
 
 /** Managed properties (stored the way Logseq writes them). */
 const val COLOR = "background-color"
