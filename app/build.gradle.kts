@@ -18,6 +18,10 @@ android {
     }
 
     buildTypes {
+        // Debug builds install beside the real app, so testing never touches its pairing or widget.
+        debug {
+            applicationIdSuffix = ".debug"
+        }
         release {
             isMinifyEnabled = true
             isShrinkResources = true

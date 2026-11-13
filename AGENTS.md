@@ -16,7 +16,7 @@ than features**: the phone and the browser edit the same pages.
 ## Build, run, test
 
 ```sh
-./gradlew assembleDebug                         # build
+./gradlew assembleDebug                         # build (app id app.blockseq.android.debug)
 adb install -r app/build/outputs/apk/debug/app-debug.apk
 ./gradlew testDebugUnitTest                     # unit tests
 tools/demo-server.sh                            # throwaway server + adb reverse
@@ -26,7 +26,13 @@ deno run -A tools/decrypt-check.ts http://127.0.0.1:3970 demo-server demo-secret
 - Test on a real phone against `tools/demo-server.sh` (made-up notes, port
   3970, server password `demo-server`, encryption password `demo-secret`).
   Pair the app with `http://localhost:3970`. Never test against the owner's
-  real server or notes.
+  real server or notes. Test with the debug build: it installs beside the
+  owner's app (`app.blockseq.android.debug`, "Blockseq debug"), so never
+  `pm clear` or uninstall `app.blockseq.android`. Uninstalling the debug app
+  afterwards also removes any test widget it placed.
+- The home screen holds the owner's private widgets: never print or keep
+  full `uiautomator dump` text or screenshots of it; filter to Blockseq's
+  own nodes and crop.
 - Compose test tags double as view ids (`testTagsAsResourceId`), so
   `adb shell uiautomator dump` can find controls (`server`, `password`,
   `pair`, `tab-journals`, `block`, `block-editor`, `done`, `keep-mine`, …).
