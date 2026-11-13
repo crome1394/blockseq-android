@@ -82,7 +82,7 @@ ignored.
   storage permission), **Remove from block** (only in the page editor; the
   file stays) and **Delete from server** (`DELETE /api/assets`, after a
   confirmation; the picture is also taken out of the block).
-- **Add a picture** (the camera icon in the page's top bar or the editing
+- **Add a picture** (the page's ⋯ menu or the camera icon on the editing
   toolbar): *Take a photo* (the system camera writes into the app cache, no
   camera permission) or *Choose from phone* (the system photo picker, no
   storage permission). The original file is uploaded with
@@ -114,6 +114,10 @@ ignored.
   strip above a block adds a row there; the list catches it before the rows,
   whose touch areas Compose stretches to 48 dp. Haptics: a buzz on lift, a
   tick when the landing place changes, a confirm (or reject) on drop.
+- The page's floating ⋯ (`PageMenuFab`, hidden while a block is edited):
+  *New row* (tap: a row at the end; drag: a chip follows the finger and the
+  same drop line places it, moving left outdents, the bin cancels;
+  `newRowAfter`), *Take a photo*, *Choose a picture*, *Lock* / *Unlock*.
 - Press and hold any block for `BlockMenu`, a bottom sheet: move up / down,
   outdent / indent, add row above / below, colours,
   headings, alignment, strikethrough (`toggleLine`, the web editor's rule), tag (`TagDialog`), timestamp, copy ref / URL /
@@ -124,7 +128,7 @@ ignored.
   (`#[[two words]]` when needed; after the text of a block that starts with
   code) unless the block already has it.
 - Settings → Controls at the bottom (on by default) moves action buttons
-  (picture viewer, page actions) to the bottom edge (`LocalControlsAtBottom`).
+  (the picture viewer's) to the bottom edge (`LocalControlsAtBottom`).
 - *Take a photo* uses the phone's camera app; on phones whose camera app does
   not take capture requests it falls back to `CameraScreen` (CameraX), which
   asks for the camera permission the first time.

@@ -9,6 +9,7 @@ The first version. Needs a Blockseq server with device pairing.
 
 ### Added
 
+- Pages and journals have a floating ⋯ menu: New row (tap: at the end; drag: to a place, with the drop line and bin), Take a photo, Choose a picture, Lock / Unlock. The camera and padlock left the top and bottom bars.
 - Left pane: the sections and favorites share the height and grow to fill it (scrolling only when too many to fit); Settings sits just above the calendar. The settings cog in the home top bar is gone (Settings is in the pane).
 - Row colours fill the whole row out to the right edge, as on the web, and show at once when picked in the block menu (they used to wait for the page to reload).
 - Calendar weekday letters are bright red; Settings → Display → First day of the week (Sunday, Monday or Saturday).

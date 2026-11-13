@@ -285,6 +285,17 @@ class PageEditor(
         return true
     }
 
+    /** A new empty block dropped after [prev] at [depth] (see [placeNode]); not saved until it has text. */
+    fun newRowAfter(prev: Node?, prevDepth: Int, depth: Int): Node? {
+        if (prev != null && depth == prevDepth + 1 && isLocked(prev)) return null
+        val n = Node(newId(), "")
+        n.parent = root
+        root.children += n
+        if (!placeNode(root, n, prev, prevDepth, depth)) { root.children.remove(n); return null }
+        changed(save = false)
+        return n
+    }
+
     /** A new empty block beside [n]: above it or below it (below goes after its children). */
     fun insertBeside(n: Node, below: Boolean): Node {
         val parent = n.parent ?: root

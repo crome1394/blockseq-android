@@ -19,6 +19,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.MoreHoriz
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
@@ -217,11 +220,6 @@ fun PageScreen(model: AppModel, name: String, onOpen: (String) -> Unit, quickNot
     }
     fun choosePhoto() = pickPhoto.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
 
-    // The page's buttons: in the top bar, or along the bottom (Settings → Controls at the bottom).
-    val pageActions: @Composable () -> Unit = {
-        PictureButton(onCamera = ::openCamera, onGallery = ::choosePhoto, tag = "page-picture")
-        if (model.setup != null) LockButton(model.key != null, onLock = { stopEdit(); model.lock() }, onUnlock = { unlocking = true })
-    }
     val snackbar = remember { androidx.compose.material3.SnackbarHostState() }
     Scaffold(
         snackbarHost = { androidx.compose.material3.SnackbarHost(snackbar) },
@@ -242,16 +240,10 @@ fun PageScreen(model: AppModel, name: String, onOpen: (String) -> Unit, quickNot
                     }
                 },
                 navigationIcon = { IconButton(onClick = { stopEdit(); onBack() }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") } },
-                actions = { if (!LocalControlsAtBottom.current) pageActions() },
             )
         },
         bottomBar = {
             val node = editing
-            if (node == null && LocalControlsAtBottom.current) {
-                Surface(tonalElevation = 3.dp) {
-                    Row(Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 8.dp), horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically) { pageActions() }
-                }
-            }
             if (node != null) {
                 EditBar(
                     onOutdent = { editor.outdent(node) },
@@ -318,6 +310,8 @@ fun PageScreen(model: AppModel, name: String, onOpen: (String) -> Unit, quickNot
             val currentRows by rememberUpdatedState(rows)
             val currentEditing by rememberUpdatedState(editingId)
             // Where the block being dragged would land, from the finger's place in the list.
+            var boxCoords by remember { mutableStateOf<androidx.compose.ui.layout.LayoutCoordinates?>(null) }
+            var pageMenu by remember(editor) { mutableStateOf(false) }
             fun dropFor(d: Drag): Drop? {
                 val skip = subtreeIds(currentRows, d.node)
                 val rest = currentRows.filter { it.node.id !in skip }
@@ -328,7 +322,9 @@ fun PageScreen(model: AppModel, name: String, onOpen: (String) -> Unit, quickNot
                 val k = hit?.let { pos.getValue(it.key as String) } ?: (pos.getValue(seen.last().key as String) + 1)
                 val lineY = hit?.offset?.toFloat() ?: seen.last().let { (it.offset + it.size).toFloat() }
                 val range = depthRange(rest, k) { it.collapsed || editor.isLocked(it) }
-                val depth = (d.depth + Math.round(d.dx / step)).coerceIn(range)
+                // A new row starts as a sibling of the row above; moving left outdents it.
+                val base = if (d.isNew) rest.getOrNull(k - 1)?.depth ?: 0 else d.depth
+                val depth = (base + Math.round(d.dx / step)).coerceIn(range)
                 return Drop(rest.getOrNull(k - 1), depth, lineY)
             }
             var drag by remember(editor) { mutableStateOf<Drag?>(null) }
@@ -369,7 +365,7 @@ fun PageScreen(model: AppModel, name: String, onOpen: (String) -> Unit, quickNot
                     kotlinx.coroutines.delay(16)
                 }
             }
-            Box(Modifier.fillMaxSize()) {
+            Box(Modifier.fillMaxSize().onGloballyPositioned { boxCoords = it }) {
             LazyColumn(Modifier.fillMaxSize().testTag("outline").pointerInput(editor) {
                 // Press and hold a block: let go to open its menu, or drag it to move it
                 // (sideways changes its depth). Taken in the Initial pass so the list
@@ -542,6 +538,52 @@ fun PageScreen(model: AppModel, name: String, onOpen: (String) -> Unit, quickNot
                     }
                 }
             }
+            // The page's ⋯ button: New row (tap: at the end; drag: to a place), pictures, lock.
+            if (editingId == null) PageMenuFab(
+                open = pageMenu, onToggle = { pageMenu = !pageMenu }, dragging = drag?.isNew == true,
+                locked = if (model.setup == null) null else model.key == null,
+                onNewRowTap = { pageMenu = false; startEdit(editor.addAtEnd()) },
+                onNewRowDrag = { phase, pos ->
+                    when (phase) {
+                        0 -> { view.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS); drag = Drag(NEW_ROW, 0, 0f, pos.y, 0f, pos.x, isNew = true) }
+                        1 -> drag = drag?.let { it.copy(fingerY = pos.y, fingerX = pos.x, dx = minOf(0f, pos.x - (it.startX ?: pos.x)), startX = it.startX ?: pos.x) }
+                        2 -> {
+                            val d = drag
+                            drag = null
+                            pageMenu = false
+                            if (d != null && !overBin(d)) {
+                                val to = dropFor(d)
+                                val fresh = to?.let { editor.newRowAfter(it.prev?.node, it.prev?.depth ?: -1, it.depth) }
+                                if (fresh != null) {
+                                    view.performHapticFeedback(if (android.os.Build.VERSION.SDK_INT >= 30) HapticFeedbackConstants.CONFIRM else HapticFeedbackConstants.VIRTUAL_KEY)
+                                    startEdit(fresh)
+                                } else view.performHapticFeedback(if (android.os.Build.VERSION.SDK_INT >= 30) HapticFeedbackConstants.REJECT else HapticFeedbackConstants.LONG_PRESS)
+                            }
+                        }
+                        else -> drag = null
+                    }
+                },
+                toBox = { c, p -> boxCoords?.localPositionOf(c, p) ?: p },
+                onCamera = { pageMenu = false; openCamera() },
+                onGallery = { pageMenu = false; choosePhoto() },
+                onLock = { pageMenu = false; stopEdit(); model.lock() },
+                onUnlock = { pageMenu = false; unlocking = true },
+                modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp),
+            )
+            // The new row being dragged in: a chip under the finger.
+            drag?.takeIf { it.isNew }?.let { d ->
+                Surface(
+                    shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp), tonalElevation = 6.dp, shadowElevation = 8.dp,
+                    color = if (onBin) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.primaryContainer,
+                    modifier = Modifier.offset { androidx.compose.ui.unit.IntOffset((d.fingerX - 140.dp.toPx()).toInt(), (d.fingerY - 56.dp.toPx()).toInt()) },
+                ) {
+                    Row(Modifier.padding(horizontal = 12.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Filled.Add, null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text("New row", style = MaterialTheme.typography.labelLarge)
+                    }
+                }
+            }
             if (drag != null) {
                 val grow by androidx.compose.animation.core.animateFloatAsState(if (onBin) 1.25f else 1f, label = "bin")
                 Box(
@@ -583,7 +625,74 @@ fun PageScreen(model: AppModel, name: String, onOpen: (String) -> Unit, quickNot
 }
 
 /** A block being dragged: where the finger is (in the list) and how far sideways it went. */
-private data class Drag(val node: Node, val depth: Int, val grabY: Float, val fingerY: Float, val dx: Float, val fingerX: Float)
+private data class Drag(
+    val node: Node, val depth: Int, val grabY: Float, val fingerY: Float, val dx: Float, val fingerX: Float,
+    /** A new row from the ⋯ menu (not a block of the page), and where the finger was when it started. */
+    val isNew: Boolean = false, val startX: Float? = null,
+)
+
+/** Stands in for the new row while it is dragged in: it is not on the page, so nothing is skipped or lifted. */
+private val NEW_ROW = Node("new-row", "")
+
+/**
+ * The page's floating ⋯: a column of actions above it. *New row* adds one at
+ * the end when tapped; dragged, it follows the finger and lands where the
+ * drop line shows ([onNewRowDrag]: 0 start, 1 move, 2 drop, 3 cancel; places
+ * in the page box's coordinates via [toBox]).
+ */
+@Composable
+private fun PageMenuFab(
+    open: Boolean, onToggle: () -> Unit, dragging: Boolean, locked: Boolean?,
+    onNewRowTap: () -> Unit, onNewRowDrag: (Int, Offset) -> Unit,
+    toBox: (androidx.compose.ui.layout.LayoutCoordinates, Offset) -> Offset,
+    onCamera: () -> Unit, onGallery: () -> Unit, onLock: () -> Unit, onUnlock: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(modifier, horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        androidx.compose.animation.AnimatedVisibility(open, enter = androidx.compose.animation.fadeIn() + androidx.compose.animation.expandVertically(expandFrom = Alignment.Bottom), exit = androidx.compose.animation.fadeOut() + androidx.compose.animation.shrinkVertically(shrinkTowards = Alignment.Bottom)) {
+            Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.graphicsLayer { alpha = if (dragging) 0.3f else 1f }) {
+                var coords by remember { mutableStateOf<androidx.compose.ui.layout.LayoutCoordinates?>(null) }
+                MenuAction("New row (tap, or drag to a place)", Icons.Filled.Add, "menu-new-row", Modifier.onGloballyPositioned { coords = it }.pointerInput(Unit) {
+                    awaitEachGesture {
+                        val down = awaitFirstDown()
+                        down.consume()
+                        var started = false
+                        try {
+                            while (true) {
+                                val ch = awaitPointerEvent().changes.firstOrNull { it.id == down.id } ?: break
+                                ch.consume()
+                                val c = coords ?: break
+                                if (!ch.pressed) { if (started) onNewRowDrag(2, toBox(c, ch.position)) else onNewRowTap(); started = false; break }
+                                if (!started && (ch.position - down.position).getDistance() > viewConfiguration.touchSlop) { started = true; onNewRowDrag(0, toBox(c, ch.position)) }
+                                if (started) onNewRowDrag(1, toBox(c, ch.position))
+                            }
+                        } finally { if (started) onNewRowDrag(3, Offset.Zero) }
+                    }
+                })
+                MenuAction("Take a photo", Icons.Filled.PhotoCamera, "menu-camera", Modifier.clickable(onClick = onCamera))
+                MenuAction("Choose a picture", Icons.Filled.PhotoLibrary, "menu-gallery", Modifier.clickable(onClick = onGallery))
+                if (locked == true) MenuAction("Unlock encrypted blocks", Icons.Filled.Lock, "menu-unlock", Modifier.clickable(onClick = onUnlock), tint = Color(0xFFFFA000))
+                if (locked == false) MenuAction("Lock encrypted blocks", Icons.Filled.LockOpen, "menu-lock", Modifier.clickable(onClick = onLock), tint = Color(0xFF43A047))
+            }
+        }
+        androidx.compose.material3.FloatingActionButton(onClick = onToggle, modifier = Modifier.testTag("page-menu")) {
+            Icon(if (open) Icons.Filled.Close else Icons.Filled.MoreHoriz, if (open) "Close" else "Page actions")
+        }
+    }
+}
+
+/** One action in the ⋯ column: its label in a small card, and its round icon (the whole row is the target). */
+@Composable
+private fun MenuAction(label: String, icon: androidx.compose.ui.graphics.vector.ImageVector, tag: String, target: Modifier, tint: Color = Color.Unspecified) {
+    Row(target.testTag(tag), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        Surface(shape = MaterialTheme.shapes.small, tonalElevation = 3.dp, shadowElevation = 2.dp) {
+            Text(label, style = MaterialTheme.typography.labelLarge, modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp))
+        }
+        Surface(shape = CircleShape, color = MaterialTheme.colorScheme.secondaryContainer, shadowElevation = 3.dp, modifier = Modifier.size(40.dp)) {
+            Box(contentAlignment = Alignment.Center) { Icon(icon, null, tint = if (tint == Color.Unspecified) MaterialTheme.colorScheme.onSecondaryContainer else tint) }
+        }
+    }
+}
 
 /** Where it would land: after [prev] (none: first on the page), at [depth]; [lineY] in the list. */
 private data class Drop(val prev: OutlineRow?, val depth: Int, val lineY: Float)

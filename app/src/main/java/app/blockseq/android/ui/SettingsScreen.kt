@@ -108,7 +108,7 @@ fun SettingsScreen(model: AppModel, onBack: () -> Unit) {
                             Row(Modifier.fillMaxWidth().clickable { model.changeControlsAtBottom(!model.controlsAtBottom) }.testTag("controls-bottom"), verticalAlignment = Alignment.CenterVertically) {
                                 Column(Modifier.weight(1f)) {
                                     Text("Controls at the bottom")
-                                    Text("Buttons such as share, save, add picture and the padlock sit along the bottom, within reach of your thumb.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    Text("The picture viewer's buttons (share, save, remove) sit along the bottom, within reach of your thumb.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 }
                                 Switch(checked = model.controlsAtBottom, onCheckedChange = { model.changeControlsAtBottom(it) })
                             }
