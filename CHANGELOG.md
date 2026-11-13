@@ -9,6 +9,7 @@ The first version. Needs a Blockseq server with device pairing.
 
 ### Added
 
+- The widget's padlock is coloured like the app's: amber while locked, green while the app has encrypted blocks unlocked. (The widget still never decrypts.)
 - Tasks: a + button opens a card to write a task, pick its status (in its colour) and add a due date; it goes on the last row of today's journal. A due date is written as `📅 [[Nov 20th, 2026]]`, so the task also shows on that day. Each task group has a calendar or page symbol.
 - Search results have a calendar beside journal days and a page symbol beside pages (tap to open). The left pane is tighter, so the calendar fits without scrolling.
 - Swipe sideways between Journals, Pages, Search and Tasks.

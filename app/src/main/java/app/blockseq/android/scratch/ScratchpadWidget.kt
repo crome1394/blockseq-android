@@ -109,7 +109,12 @@ class ScratchpadWidget : GlanceAppWidget() {
             Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Text(SCRATCHPAD, style = TextStyle(color = fg, fontSize = 16.sp, fontWeight = FontWeight.Bold), modifier = GlanceModifier.defaultWeight().clickable(open))
                 // Encrypted rows can only be read in the app (the key is never kept on the phone): the padlock opens it there.
-                if (hasEncrypted) Image(ImageProvider(R.drawable.ic_widget_lock), "Open in the app to unlock", colorFilter = ColorFilter.tint(fg), modifier = GlanceModifier.size(28.dp).padding(3.dp).clickable(open))
+                val open_ = WidgetLockState.unlocked
+                if (hasEncrypted) Image(
+                    ImageProvider(if (open_) R.drawable.ic_widget_lock_open else R.drawable.ic_widget_lock),
+                    if (open_) "Unlocked in the app" else "Open in the app to unlock",
+                    colorFilter = ColorFilter.tint(ColorProvider(if (open_) Color(0xFF43A047) else Color(0xFFFFA000))),
+                    modifier = GlanceModifier.size(28.dp).padding(3.dp).clickable(open))
                 Spacer(GlanceModifier.width(10.dp))
                 Image(ImageProvider(R.drawable.ic_widget_sync), "Sync", colorFilter = ColorFilter.tint(fg), modifier = GlanceModifier.size(28.dp).padding(2.dp).clickable(actionRunCallback<SyncNow>()))
                 Spacer(GlanceModifier.width(10.dp))

@@ -109,6 +109,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         store.forget()
         api = null
         key = null
+        app.blockseq.android.scratch.WidgetLockState.unlocked = false
         unpairedMessage = message
     }
 
@@ -124,12 +125,25 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         key = withContext(Dispatchers.Default) { BlockCrypto.unlock(s, password) }
         android.util.Log.i("Blockseq", "unlocked in ${(System.nanoTime() - started) / 1_000_000} ms")
         generation++
+        lockChanged()
     }
 
     fun lock() {
         key?.fill(0)
         key = null
         generation++
+        lockChanged()
+    }
+
+    /** The widget's padlock follows the app's (green open, amber locked); only the state is shared, never the key. */
+    private fun lockChanged() {
+        app.blockseq.android.scratch.WidgetLockState.unlocked = key != null
+        viewModelScope.launch { app.blockseq.android.scratch.ScratchpadWidget.refresh(getApplication()) }
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        app.blockseq.android.scratch.WidgetLockState.unlocked = false
     }
 
     companion object {

@@ -36,3 +36,8 @@ object WidgetPrefs {
             .remove("locked").apply()
     }
 }
+
+/** Whether the app has encrypted blocks unlocked right now (memory only; a new process starts locked). */
+object WidgetLockState {
+    @Volatile var unlocked = false
+}
