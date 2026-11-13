@@ -9,6 +9,7 @@ The first version. Needs a Blockseq server with device pairing.
 
 ### Added
 
+- Swipe sideways between Journals, Pages, Search and Tasks.
 - The Add a tag list shows each tag in its colour.
 - Widget: notes are never hidden. An encrypted row shows its own text and a 🔒 line, as in the web app while locked; the padlock (shown when there is one) opens the Scratchpad in the app to unlock it. The hide-everything padlock is gone.
 - Horizontal lines: `---` (or `***`, `___`) on its own line draws a line in pages and the widget; the editing toolbar has a button that adds one, as the web's `/hr`.

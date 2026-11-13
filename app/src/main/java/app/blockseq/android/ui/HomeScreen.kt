@@ -122,6 +122,10 @@ fun HomeScreen(model: AppModel, onOpen: (String) -> Unit, onSettings: () -> Unit
     var noting by remember { mutableStateOf(false) }
     if (noting) QuickNoteSheet(model, onOpenDay = { noting = false; onQuickNote(journalName(LocalDate.now())) }, onDone = { added -> noting = false; if (added) changes++ })
     if (creating) NewPageDialog(model, onDone = { name -> creating = false; name?.let(onOpen) })
+    // Swipe sideways between the tabs; the tab bar and the swipe stay in step.
+    val pager = androidx.compose.foundation.pager.rememberPagerState(initialPage = tab.ordinal) { Tab.entries.size }
+    LaunchedEffect(tab) { if (pager.currentPage != tab.ordinal) pager.animateScrollToPage(tab.ordinal) }
+    LaunchedEffect(pager.settledPage) { tab = Tab.entries[pager.settledPage] }
     val drawer = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     ModalNavigationDrawer(
@@ -165,13 +169,15 @@ fun HomeScreen(model: AppModel, onOpen: (String) -> Unit, onSettings: () -> Unit
     ) { pad ->
         val key = "${model.generation}:$changes"
         // The tab bar's space is already taken off: the keyboard padding below must not count it again.
-        Column(Modifier.padding(pad).consumeWindowInsets(pad).fillMaxSize()) {
-            when (tab) {
+        androidx.compose.foundation.pager.HorizontalPager(pager, Modifier.padding(pad).consumeWindowInsets(pad).fillMaxSize(), key = { Tab.entries[it].name }) { page ->
+          Column(Modifier.fillMaxSize()) {
+            when (Tab.entries[page]) {
                 Tab.Journals -> JournalsTab(model, key, onOpen)
                 Tab.Pages -> PagesTab(model, key, onOpen, filtering) { filtering = false }
                 Tab.Search -> SearchTab(model, onOpen)
                 Tab.Tasks -> TasksTab(model, key, onOpen)
             }
+          }
         }
     }
     }
