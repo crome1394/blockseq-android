@@ -181,7 +181,8 @@ class Api(private val base: String, private val token: String?, val workbook: St
 
     /** Server-sent events: one JSON object per change anywhere on the server. */
     fun events(): Flow<JsonObject> = callbackFlow {
-        val sse = OkHttpClient.Builder().readTimeout(0, TimeUnit.SECONDS).build()
+        // Same pool and settings as the other calls, but no read timeout (the stream stays open).
+        val sse = http.newBuilder().readTimeout(0, TimeUnit.SECONDS).build()
         val source = EventSources.createFactory(sse).newEventSource(
             request(url("/api/events", global = true)).header("Accept", "text/event-stream").build(),
             object : EventSourceListener() {
