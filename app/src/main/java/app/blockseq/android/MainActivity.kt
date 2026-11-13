@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.dialog
 import androidx.navigation.compose.rememberNavController
 import app.blockseq.android.ui.BlockseqTheme
 import app.blockseq.android.ui.HomeScreen
@@ -69,7 +70,10 @@ class MainActivity : ComponentActivity() {
                                 val note = entry.arguments?.getString("note") == "true"
                                 PageScreen(model, name, open, quickNote = note) { nav.popBackStack() }
                             }
-                            composable("settings") { SettingsScreen(model) { nav.popBackStack() } }
+                            // A card over the screen it was opened from.
+                            dialog("settings", dialogProperties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
+                                SettingsScreen(model) { nav.popBackStack() }
+                            }
                         }
                     }
                 }

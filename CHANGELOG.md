@@ -9,7 +9,8 @@ The first version. Needs a Blockseq server with device pairing.
 
 ### Added
 
-- The quick-note cards (widget + and journal pencil) have an X to close them. (`QX`)
+- **Settings** open as a card over the current screen, in tabs you can swipe between: General, Display, Code, Widget, Security. Widget has the widget's look (colours, Solid / See-through / Transparent, order, buttons top or bottom), applied to every widget at once. (`SET`)
+- The quick-note cards (widget + and journal pencil) have an X to close them. (`851a6fb`)
 - Widget: notes grouped under a heading for each day, times without seconds; a padlock that hides the notes until tapped again; the buttons at the top or bottom; a Solid / See-through / Transparent background. The look is now one setting for every widget. (`c17696b`)
 - **Strikethrough**: in the block menu (the first line; status and tags stay outside) and on the editing toolbar (the selection, or the line the cursor is on), stored as `~~text~~` like the web app. (`38a6eb0`)
 - **Scratchpad widget**: the Main workbook's Scratchpad page on the home screen, newest first (or oldest), with date stamps, pictures and a + card to add a note. Notes are kept on the phone at once and sent when there is a connection; a Sync button too. Background colour, transparency, text colour and order are set per widget. Settings → Scratchpad widget can place it and sync. (`07e23a5`)

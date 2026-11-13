@@ -21,7 +21,7 @@ Nothing is cached on the phone between launches except the pairing.
 | `render/Markdown.kt` | Inline Markdown to styled, tappable text; a block split into parts |
 | `render/BlockView.kt` | Drawing one block: task badge, text, code, tables, tips, images |
 | `render/ImageViewer.kt` | A picture full screen: zoom, share, save, remove, delete |
-| `ui/` | Compose screens: pairing, home (left pane, tabs), page, settings, unlock |
+| `ui/` | Compose screens: pairing, home (left pane with a month calendar, tabs), page, settings (a dialog card with swipeable tabs), unlock |
 | `app/src/test/` | Unit tests: outline format, tasks, encryption (vectors made with WebCrypto) |
 | `tools/` | A throwaway demo server with made-up notes, and a WebCrypto decrypt check |
 
