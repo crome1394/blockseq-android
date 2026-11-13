@@ -7,7 +7,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -46,7 +46,7 @@ fun MonthCalendar(days: Set<Long>, onDay: (LocalDate) -> Unit) {
     val today = LocalDate.now()
     var month by remember { mutableStateOf(YearMonth.from(today)) }
     val primary = MaterialTheme.colorScheme.primary
-    Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 4.dp).testTag("calendar")) {
+    Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp).padding(bottom = 8.dp).testTag("calendar")) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = { month = month.minusMonths(1) }) { Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, "Previous month") }
             Text(
@@ -68,11 +68,11 @@ fun MonthCalendar(days: Set<Long>, onDay: (LocalDate) -> Unit) {
             Row(Modifier.fillMaxWidth()) {
                 (0 until 7).forEach { i ->
                     val date = week.getOrNull(i)
-                    Box(Modifier.weight(1f).aspectRatio(1f), contentAlignment = Alignment.Center) {
+                    Box(Modifier.weight(1f).height(36.dp), contentAlignment = Alignment.Center) {
                         if (date != null) {
                             val isToday = date == today
                             Column(
-                                Modifier.size(34.dp).then(if (isToday) Modifier.border(1.5.dp, primary, CircleShape) else Modifier)
+                                Modifier.size(32.dp).then(if (isToday) Modifier.border(1.5.dp, primary, CircleShape) else Modifier)
                                     .clickable { onDay(date) }.testTag("day-${date.dayOfMonth}"),
                                 horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center,
                             ) {

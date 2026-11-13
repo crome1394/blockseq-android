@@ -60,6 +60,8 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.material.icons.automirrored.filled.Article
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.material.icons.filled.MoreVert
@@ -199,13 +201,13 @@ private fun LeftPane(model: AppModel, current: Tab, onTab: (Tab) -> Unit, onOpen
     ModalDrawerSheet(Modifier.testTag("left-pane")) {
         LazyColumn {
             item {
-                Text("Blockseq", style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(start = 24.dp, top = 20.dp))
+                Text("Blockseq", style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(start = 24.dp, top = 12.dp))
                 ConnectionStatus(model)
             }
             items(Tab.entries.toList(), key = { "tab:" + it.name }) { t ->
                 NavigationDrawerItem(
                     label = { Text(t.label) }, icon = { Icon(t.icon, null) }, selected = t == current, onClick = { onTab(t) },
-                    modifier = Modifier.padding(horizontal = 12.dp).testTag("pane-${t.name.lowercase()}"),
+                    modifier = Modifier.padding(horizontal = 12.dp).height(40.dp).testTag("pane-${t.name.lowercase()}"),
                 )
             }
             item { PaneHeading("Favorites") }
@@ -213,7 +215,7 @@ private fun LeftPane(model: AppModel, current: Tab, onTab: (Tab) -> Unit, onOpen
                 Text("Star a page in the web app to see it here.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(horizontal = 28.dp, vertical = 4.dp))
             }
             items(favorites, key = { "fav:$it" }) { name ->
-                NavigationDrawerItem(label = { Text(name) }, icon = { Icon(Icons.Filled.Star, null, tint = STAR_YELLOW) }, selected = false, onClick = { onOpen(name) }, modifier = Modifier.padding(horizontal = 12.dp))
+                NavigationDrawerItem(label = { Text(name) }, icon = { Icon(Icons.Filled.Star, null, tint = STAR_YELLOW) }, selected = false, onClick = { onOpen(name) }, modifier = Modifier.padding(horizontal = 12.dp).height(40.dp))
             }
             if (workbooks.size > 1) {
                 item { PaneHeading("Workbooks") }
@@ -221,14 +223,14 @@ private fun LeftPane(model: AppModel, current: Tab, onTab: (Tab) -> Unit, onOpen
                     NavigationDrawerItem(
                         label = { Text(w.name) }, icon = { Icon(Icons.Filled.Book, null) },
                         selected = model.store.workbook == w.id, onClick = { model.switchWorkbook(w.id) },
-                        modifier = Modifier.padding(horizontal = 12.dp),
+                        modifier = Modifier.padding(horizontal = 12.dp).height(40.dp),
                     )
                 }
             }
             item {
-                HorizontalDivider(Modifier.padding(vertical = 8.dp))
-                NavigationDrawerItem(label = { Text("Settings") }, icon = { Icon(Icons.Filled.Settings, null) }, selected = false, onClick = onSettings, modifier = Modifier.padding(horizontal = 12.dp))
-                HorizontalDivider(Modifier.padding(vertical = 8.dp))
+                HorizontalDivider(Modifier.padding(vertical = 4.dp))
+                NavigationDrawerItem(label = { Text("Settings") }, icon = { Icon(Icons.Filled.Settings, null) }, selected = false, onClick = onSettings, modifier = Modifier.padding(horizontal = 12.dp).height(40.dp))
+                HorizontalDivider(Modifier.padding(vertical = 4.dp))
                 MonthCalendar(days) { onOpen(journalName(it)) }
             }
         }
@@ -237,7 +239,7 @@ private fun LeftPane(model: AppModel, current: Tab, onTab: (Tab) -> Unit, onOpen
 
 @Composable
 private fun PaneHeading(text: String) {
-    HorizontalDivider(Modifier.padding(vertical = 8.dp))
+    HorizontalDivider(Modifier.padding(vertical = 4.dp))
     Text(text, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(start = 28.dp, bottom = 4.dp))
 }
 
@@ -445,11 +447,17 @@ private fun SearchTab(model: AppModel, onOpen: (String) -> Unit) {
         if (!atBottom) field()
         LazyColumn(Modifier.weight(1f), reverseLayout = false) {
             items(results.pages, key = { "p:$it" }) { name ->
-                Text(name, color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.fillMaxWidth().clickable { onOpen(name) }.padding(horizontal = 16.dp, vertical = 10.dp))
+                Row(Modifier.fillMaxWidth().clickable { onOpen(name) }.padding(horizontal = 16.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                    PageIcon(name, Modifier.padding(end = 10.dp).size(22.dp))
+                    Text(name, color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.bodyLarge)
+                }
             }
             items(results.blocks, key = { "b:" + it.id }) { b: BlockHit ->
                 Column(Modifier.fillMaxWidth().clickable { onOpen(b.pageName) }.padding(horizontal = 16.dp, vertical = 8.dp)) {
-                    Text(b.pageName, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        PageIcon(b.pageName, Modifier.padding(end = 6.dp).size(18.dp))
+                        Text(b.pageName, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
                     BlockContent(b.content, model.statuses, api, onTap, null)
                 }
             }
@@ -663,4 +671,14 @@ private fun QuickNoteSheet(model: AppModel, onOpenDay: () -> Unit, onDone: (adde
             }
         }
     }
+}
+
+/** A calendar for a journal day, a page symbol for any other page (as in linked references). */
+@Composable
+fun PageIcon(name: String, modifier: Modifier = Modifier) {
+    Icon(
+        if (isJournalName(name)) Icons.Filled.CalendarMonth else Icons.AutoMirrored.Filled.Article,
+        if (isJournalName(name)) "Journal" else "Page",
+        tint = app.blockseq.android.render.inlineColors().link, modifier = modifier,
+    )
 }
