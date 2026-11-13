@@ -60,7 +60,10 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.material.icons.filled.StickyNote2
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.material.icons.filled.Tag
 import androidx.compose.material.icons.automirrored.filled.Article
 import androidx.compose.foundation.layout.height
@@ -122,8 +125,7 @@ fun HomeScreen(model: AppModel, onOpen: (String) -> Unit, onSettings: () -> Unit
     if (unlocking) UnlockDialog(model) { unlocking = false }
     var creating by remember { mutableStateOf(false) }
     var pagesMenu by remember { mutableStateOf(false) }
-    var journalMenu by remember { mutableStateOf(false) }
-    LaunchedEffect(tab) { pagesMenu = false; journalMenu = false }
+    LaunchedEffect(tab) { pagesMenu = false }
     var filtering by rememberSaveable { mutableStateOf(false) }
     var noting by remember { mutableStateOf(false) }
     var tasking by remember { mutableStateOf(false) }
@@ -164,14 +166,8 @@ fun HomeScreen(model: AppModel, onOpen: (String) -> Unit, onSettings: () -> Unit
                     ),
                 )
                 Tab.Tasks -> FloatingActionButton(onClick = { tasking = true }, modifier = Modifier.testTag("fab-task")) { Icon(Icons.Filled.Add, "New task") }
-                // Journals: the pencil opens Quick note (a card) or Edit journal (today's journal, editing its last row).
-                Tab.Journals -> ActionsFab(
-                    journalMenu, Icons.Filled.Edit, "Journal actions", "fab-journal", { journalMenu = !journalMenu },
-                    listOf(
-                        FabItem("Edit journal", Icons.Filled.Edit, "fab-edit-journal") { journalMenu = false; onQuickNote(journalName(LocalDate.now())) },
-                        FabItem("Quick note", Icons.Filled.StickyNote2, "fab-note") { journalMenu = false; noting = true },
-                    ),
-                )
+                // Journals: the pencil opens the Quick note card.
+                Tab.Journals -> FloatingActionButton(onClick = { noting = true }, modifier = Modifier.testTag("fab-note")) { Icon(Icons.Filled.Edit, "Quick note") }
                 else -> {}
             }
         },
@@ -191,7 +187,23 @@ fun HomeScreen(model: AppModel, onOpen: (String) -> Unit, onSettings: () -> Unit
     ) { pad ->
         val key = "${model.generation}:$changes"
         // The tab bar's space is already taken off: the keyboard padding below must not count it again.
-        androidx.compose.foundation.pager.HorizontalPager(pager, Modifier.padding(pad).consumeWindowInsets(pad).fillMaxSize(), key = { Tab.entries[it].name }) { page ->
+        // On the first tab, a swipe right (past the pager's edge) opens the left pane.
+        // Watched without consuming, so the pager and lists work as before.
+        val openAt = with(androidx.compose.ui.platform.LocalDensity.current) { 56.dp.toPx() }
+        val swipeToPane = Modifier.pointerInput(Unit) {
+            awaitEachGesture {
+                val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
+                if (pager.currentPage != 0) return@awaitEachGesture
+                while (true) {
+                    val ch = awaitPointerEvent(PointerEventPass.Initial).changes.firstOrNull { it.id == down.id } ?: break
+                    if (!ch.pressed) break
+                    val d = ch.position - down.position
+                    if (kotlin.math.abs(d.y) > kotlin.math.abs(d.x) && kotlin.math.abs(d.y) > viewConfiguration.touchSlop) break
+                    if (d.x > openAt && d.x > 2 * kotlin.math.abs(d.y)) { scope.launch { drawer.open() }; break }
+                }
+            }
+        }
+        androidx.compose.foundation.pager.HorizontalPager(pager, Modifier.padding(pad).consumeWindowInsets(pad).fillMaxSize().then(swipeToPane), key = { Tab.entries[it].name }) { page ->
           Column(Modifier.fillMaxSize()) {
             when (Tab.entries[page]) {
                 Tab.Journals -> JournalsTab(model, key, onOpen)
@@ -219,7 +231,7 @@ private fun LeftPane(model: AppModel, current: Tab, onTab: (Tab) -> Unit, onOpen
         runCatching { api.sidebar() }.onSuccess { days = it.journalDays.toSet() }
     }
     ModalDrawerSheet(Modifier.testTag("left-pane")) {
-        LazyColumn {
+        LazyColumn(Modifier.weight(1f)) {
             item {
                 Text("Blockseq", style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(start = 24.dp, top = 12.dp))
                 ConnectionStatus(model)
@@ -250,10 +262,11 @@ private fun LeftPane(model: AppModel, current: Tab, onTab: (Tab) -> Unit, onOpen
             item {
                 HorizontalDivider(Modifier.padding(vertical = 4.dp))
                 NavigationDrawerItem(label = { Text("Settings") }, icon = { Icon(Icons.Filled.Settings, null) }, selected = false, onClick = onSettings, modifier = Modifier.padding(horizontal = 12.dp).height(40.dp))
-                HorizontalDivider(Modifier.padding(vertical = 4.dp))
-                MonthCalendar(days) { onOpen(journalName(it)) }
             }
         }
+        // The calendar sits at the bottom of the pane; the list above scrolls if it runs long.
+        HorizontalDivider(Modifier.padding(vertical = 4.dp))
+        MonthCalendar(days) { onOpen(journalName(it)) }
     }
 }
 

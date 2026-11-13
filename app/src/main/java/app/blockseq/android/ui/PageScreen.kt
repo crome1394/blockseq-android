@@ -695,17 +695,24 @@ private fun ConflictDiffDialog(editor: PageEditor, onClose: () -> Unit) {
                 Spacer(Modifier.height(8.dp))
                 if (lines.none { it.kind != app.blockseq.android.editor.DiffLine.Kind.Same }) Text("The text is the same; only hidden details (such as properties or folding) differ.")
                 androidx.compose.foundation.lazy.LazyColumn(Modifier.testTag("diff-list")) {
-                    val shown = foldSame(lines)
-                    items(shown.size) { i ->
-                        val l = shown[i]
+                    val folded = foldSame(lines)
+                    items(folded.size) { i ->
+                        val l = folded[i]
                         val (mark, color, bg) = when (l?.kind) {
                             null -> Triple(" ", MaterialTheme.colorScheme.onSurfaceVariant, Color.Transparent)
                             app.blockseq.android.editor.DiffLine.Kind.Theirs -> Triple("−", red, red.copy(alpha = 0.12f))
                             app.blockseq.android.editor.DiffLine.Kind.Mine -> Triple("+", green, green.copy(alpha = 0.12f))
                             else -> Triple(" ", MaterialTheme.colorScheme.onSurfaceVariant, Color.Transparent)
                         }
+                        // The words that changed within the row get a stronger mark.
+                        val shown = if (l == null) androidx.compose.ui.text.AnnotatedString("  ⋯") else androidx.compose.ui.text.buildAnnotatedString {
+                            append("$mark ")
+                            val start = length
+                            append(l.text)
+                            l.changed.forEach { r -> addStyle(androidx.compose.ui.text.SpanStyle(background = color.copy(alpha = 0.35f), fontWeight = androidx.compose.ui.text.font.FontWeight.Bold), start + r.first, start + r.last + 1) }
+                        }
                         Text(
-                            if (l == null) "  ⋯" else "$mark ${l.text}",
+                            shown,
                             color = color,
                             style = MaterialTheme.typography.bodySmall.copy(fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace),
                             modifier = Modifier.fillMaxWidth().background(bg).padding(horizontal = 4.dp, vertical = 1.dp),

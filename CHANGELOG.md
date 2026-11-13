@@ -10,7 +10,14 @@ The first version. Needs a Blockseq server with device pairing.
 ### Added
 
 - Widget notes go in as children of the day's date row (`[[Nov 13th, 2026]]`, made with the day's first note), so the Scratchpad reads as one block per day with that day's notes under it.
-- Journals: the pencil opens a small menu, Quick note (sticky note symbol, the card) or Edit journal (today's journal, editing its last row).
+- Conflicts: within a changed row, the words that differ are marked.
+- On the Journals tab, a swipe right opens the left pane.
+- The left pane's calendar stays at the bottom of the pane.
+- Journals: the pencil opens the Quick note card straight away (the Edit journal choice is gone).
+- Conflicts: *See the differences* lists theirs and mine line by line (6f753b6).
+- Drag a block onto the bin in the bottom-right corner to delete it, with Undo (cdef3c1).
+- Tree lines bend into each child's dot with a rounded corner (ea1f8e0).
+- Press and hold a block and drag it to move it (sideways changes its depth); tap the strip above a block to add a row; Move up / down, Outdent / Indent and Add row above / below in the block menu; haptic feedback (ed7590c).
 - The block menu opens half way and can be dragged up or down from anywhere on it, not only the handle.
 - Lines join the bullets in pages, as in the web app: from a block's dot down to its last child.
 - Search: tags have a tag symbol.
