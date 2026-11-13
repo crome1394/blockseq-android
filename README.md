@@ -39,6 +39,7 @@ The phone must reach the server, e.g. on your network or over a VPN such as Tail
 ./gradlew assembleDebug                 # app/build/outputs/apk/debug/app-debug.apk
 adb install -r app/build/outputs/apk/debug/app-debug.apk
 ./gradlew testDebugUnitTest             # unit tests (outline format, tasks, encryption)
+tools/install-release.sh                # minified build (~3 MB), signed with your debug key, installed
 ```
 
 Needs JDK 21 and the Android SDK (platform 36). The Gradle wrapper downloads Gradle itself.
