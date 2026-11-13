@@ -696,13 +696,23 @@ private fun Modifier.treeLines(depth: Int, nextDepth: Int, passing: BooleanArray
     val stroke = 1.dp.toPx()
     fun x(level: Int) = (12 + level * 20 + 8).dp.toPx()
     val dotY = 25.dp.toPx() // gap strip 8 + bullet padding 9 + half its 16
-    for (level in 0 until depth) {
-        when {
-            // A later sibling of this row's branch still comes: the line runs through.
-            passing[level] -> drawLine(color, androidx.compose.ui.geometry.Offset(x(level), 0f), androidx.compose.ui.geometry.Offset(x(level), size.height), stroke)
-            // The last child: the parent's line ends at its dot.
-            level == depth - 1 -> drawLine(color, androidx.compose.ui.geometry.Offset(x(level), 0f), androidx.compose.ui.geometry.Offset(x(level), dotY), stroke)
+    for (level in 0 until depth - 1) {
+        // A later sibling of this row's branch still comes: the line runs through.
+        if (passing[level]) drawLine(color, Offset(x(level), 0f), Offset(x(level), size.height), stroke)
+    }
+    if (depth > 0) {
+        // The parent's line comes down and bends into this row's dot, with a rounded corner.
+        val px = x(depth - 1)
+        val r = 8.dp.toPx()
+        val end = x(depth) - 6.dp.toPx()
+        if (passing[depth - 1]) drawLine(color, Offset(px, 0f), Offset(px, size.height), stroke)
+        val elbow = androidx.compose.ui.graphics.Path().apply {
+            moveTo(px, 0f)
+            lineTo(px, dotY - r)
+            quadraticTo(px, dotY, px + r, dotY)
+            lineTo(end, dotY)
         }
+        drawPath(elbow, color, style = androidx.compose.ui.graphics.drawscope.Stroke(stroke))
     }
     // Open children below: a line starts at this dot.
     if (nextDepth > depth) drawLine(color, androidx.compose.ui.geometry.Offset(x(depth), dotY), androidx.compose.ui.geometry.Offset(x(depth), size.height), stroke)
