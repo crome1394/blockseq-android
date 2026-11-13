@@ -9,6 +9,7 @@ The first version. Needs a Blockseq server with device pairing.
 
 ### Added
 
+- Fixed: typing while a save was on its way cancelled it on the phone after the server had stored it, so the next save reported a conflict with the phone's own change.
 - Fixed: locking with a change to an encrypted block still unsaved (a slow or offline save) no longer seals it with an empty key; the page saves before locking, and a change that still cannot be sealed is refused.
 - An X at the top right closes the block menu, Add a tag, New page or tag, and the Differences card.
 - Pages list: regular pages have a page symbol, beside the calendar for journals and the star for starred pages.

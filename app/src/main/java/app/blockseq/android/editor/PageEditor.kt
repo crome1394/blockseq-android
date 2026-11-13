@@ -20,9 +20,11 @@ import app.blockseq.android.outline.flatten
 import app.blockseq.android.outline.newId
 import app.blockseq.android.outline.parseOutline
 import app.blockseq.android.outline.subtreeMarkdown
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -459,7 +461,9 @@ class PageEditor(
         saveJob?.cancel()
         saveJob = scope.launch {
             delay(delayMs)
-            save()
+            // Only the wait is cancelled by the next edit: a save already sent must finish,
+            // or the server's new version is dropped and the next save conflicts with itself.
+            withContext(NonCancellable) { save() }
         }
     }
 
@@ -492,6 +496,8 @@ class PageEditor(
                     saveAgain = true
                 }
             }
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Unpaired) {
             onUnpaired(e)
         } catch (e: LockedOut) {
