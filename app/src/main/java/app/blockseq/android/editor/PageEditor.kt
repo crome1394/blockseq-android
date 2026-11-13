@@ -80,6 +80,8 @@ class PageEditor(
     private var saveJob: Job? = null
     private var saveAgain = false
     private var overwriteNext = false
+    /** Counts edits, so a save only marks the page clean when nothing changed while it was on its way. */
+    private var edits = 0
 
     val rows: List<Row>
         get() {
@@ -206,6 +208,7 @@ class PageEditor(
         revision++
         if (save) {
             dirty = true
+            edits++
             scheduleSave()
         }
     }
@@ -473,6 +476,7 @@ class PageEditor(
         if (saving) { saveAgain = true; return }
         saving = true
         try {
+            val sent = edits
             val blocks = withContext(Dispatchers.Default) {
                 sealSecrets()
                 flatten(root)
@@ -485,7 +489,7 @@ class PageEditor(
                     lastSaved = System.currentTimeMillis()
                     onSynced()
                     error = null
-                    if (!saveAgain) dirty = false
+                    if (!saveAgain && edits == sent) dirty = false
                 }
                 is SaveResult.Conflict -> conflict = Conflict.Changed(r.page.version, r.blocks)
                 SaveResult.Deleted -> conflict = Conflict.Deleted
