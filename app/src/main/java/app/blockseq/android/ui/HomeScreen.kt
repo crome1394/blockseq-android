@@ -341,6 +341,15 @@ private fun JournalsTab(model: AppModel, key: String, onOpen: (String) -> Unit) 
     }
 }
 
+/** The band for striped journal rows, from the theme so it suits dark and light; null: off. */
+@Composable
+internal fun stripeColor(style: String): androidx.compose.ui.graphics.Color? = when (style) {
+    "subtle" -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f)
+    "stronger" -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.09f)
+    "accent" -> MaterialTheme.colorScheme.primary.copy(alpha = 0.18f)
+    else -> null
+}
+
 @Composable
 private fun JournalCard(name: String, blocks: List<app.blockseq.android.outline.Block>, model: AppModel, onOpen: (String) -> Unit, onTap: (Target) -> Unit) {
     Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp)) {
@@ -368,8 +377,14 @@ private fun JournalCard(name: String, blocks: List<app.blockseq.android.outline.
                 preview += Triple(0, c, c.encryptedBlob != null && key == null)
                 if (!c.collapsed) openKids(c).forEach { preview += Triple(1, it, false) }
             }
-            preview.take(12).forEach { (depth, node, locked) ->
-                Row(Modifier.padding(start = (depth * 18).dp, top = 3.dp)) {
+            // Every other row gets a soft band (Settings → Display → Journal rows).
+            val band = stripeColor(model.store.journalStripes)
+            preview.take(12).forEachIndexed { i, (depth, node, locked) ->
+                Row(
+                    Modifier.padding(top = 2.dp).fillMaxWidth()
+                        .then(if (band != null && i % 2 == 1) Modifier.background(band, androidx.compose.foundation.shape.RoundedCornerShape(6.dp)) else Modifier)
+                        .padding(start = (depth * 18 + 6).dp, end = 6.dp, top = 3.dp, bottom = 3.dp),
+                ) {
                     Text("•", color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Spacer(Modifier.width(8.dp))
                     Column(Modifier.weight(1f)) {

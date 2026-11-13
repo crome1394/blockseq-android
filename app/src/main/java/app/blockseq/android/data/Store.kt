@@ -45,6 +45,13 @@ class Store(context: Context) {
         get() = prefs.getBoolean("search_bottom", false)
         set(v) = prefs.edit().putBoolean("search_bottom", v).apply()
 
+    /** Striped rows on the Journals tab: "off", "subtle" (default), "stronger" or "accent". */
+    // Observable, so the Journals tab under the settings card redraws at once.
+    private val stripesState = androidx.compose.runtime.mutableStateOf(prefs.getString("journal_stripes", "subtle") ?: "subtle")
+    var journalStripes: String
+        get() = stripesState.value
+        set(v) { stripesState.value = v; prefs.edit().putString("journal_stripes", v).apply() }
+
     /** The day weeks start on in calendars (java.time DayOfWeek value: 7 = Sunday, the default). */
     var weekStart: Int
         get() = prefs.getInt("week_start", 7)

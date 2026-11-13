@@ -1,6 +1,8 @@
 package app.blockseq.android.ui
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -119,6 +121,20 @@ fun SettingsScreen(model: AppModel, onBack: () -> Unit) {
                                 Row(Modifier.fillMaxWidth().clickable { bottom = value; model.store.searchAtBottom = value }.testTag("search-${if (value) "bottom" else "top"}"), verticalAlignment = Alignment.CenterVertically) {
                                     RadioButton(selected = bottom == value, onClick = { bottom = value; model.store.searchAtBottom = value })
                                     Text(label)
+                                }
+                            }
+                            HorizontalDivider()
+                            Section("Journal rows")
+                            Text("A soft band on every other row on the Journals tab, to keep your place.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            var stripes by remember { mutableStateOf(model.store.journalStripes) }
+                            listOf("off" to "Off", "subtle" to "Subtle", "stronger" to "Stronger", "accent" to "Accent colour").forEach { (value, label) ->
+                                Row(Modifier.fillMaxWidth().clickable { stripes = value; model.store.journalStripes = value }.testTag("stripes-$value"), verticalAlignment = Alignment.CenterVertically) {
+                                    RadioButton(selected = stripes == value, onClick = { stripes = value; model.store.journalStripes = value })
+                                    Text(label, modifier = Modifier.weight(1f))
+                                    // A small sample of the band.
+                                    Box(Modifier.padding(end = 4.dp).size(width = 56.dp, height = 20.dp).background(MaterialTheme.colorScheme.surface, RoundedCornerShape(6.dp))) {
+                                        stripeColor(value)?.let { Box(Modifier.fillMaxSize().background(it, RoundedCornerShape(6.dp))) }
+                                    }
                                 }
                             }
                             HorizontalDivider()
