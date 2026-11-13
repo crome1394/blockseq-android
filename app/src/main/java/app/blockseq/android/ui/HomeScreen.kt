@@ -176,17 +176,20 @@ fun HomeScreen(model: AppModel, onOpen: (String) -> Unit, onSettings: () -> Unit
 private fun LeftPane(model: AppModel, current: Tab, onTab: (Tab) -> Unit, onOpen: (String) -> Unit, onSettings: () -> Unit, open: Boolean) {
     var favorites by remember { mutableStateOf<List<String>>(emptyList()) }
     var workbooks by remember { mutableStateOf<List<app.blockseq.android.data.Workbook>>(emptyList()) }
+    var days by remember { mutableStateOf<Set<Long>>(emptySet()) }
     LaunchedEffect(open, model.generation) {
         if (!open) return@LaunchedEffect
         val api = model.api ?: return@LaunchedEffect
         runCatching { api.pages() }.onSuccess { list -> favorites = list.filter { it.favorite }.map { it.name } }.onFailure(model::handle)
         runCatching { api.workbooks() }.onSuccess { workbooks = it }
+        runCatching { api.sidebar() }.onSuccess { days = it.journalDays.toSet() }
     }
     ModalDrawerSheet(Modifier.testTag("left-pane")) {
         LazyColumn {
             item {
                 Text("Blockseq", style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(start = 24.dp, top = 20.dp))
                 ConnectionStatus(model)
+                MonthCalendar(days) { onOpen(journalName(it)) }
             }
             items(Tab.entries.toList(), key = { "tab:" + it.name }) { t ->
                 NavigationDrawerItem(

@@ -26,6 +26,10 @@ import okhttp3.sse.EventSources
 import java.util.UUID
 import java.util.concurrent.TimeUnit
 
+/** The parts of `/api/sidebar` the app uses: yyyymmdd of days whose journal has blocks. */
+@Serializable
+data class Sidebar(@kotlinx.serialization.SerialName("journal_days") val journalDays: List<Long> = emptyList())
+
 @Serializable
 data class PageMeta(val id: String, val name: String, @SerialName("journal_day") val journalDay: Long? = null, val version: Long, @SerialName("updated_at") val updatedAt: Long = 0, val favorite: Boolean = false)
 
@@ -128,6 +132,7 @@ class Api(private val base: String, private val token: String?, val workbook: St
     suspend fun journals(before: Long? = null, limit: Int = 10): List<JournalPage> =
         get(url("/api/journals", "before" to before?.toString(), "limit" to limit.toString()))
     suspend fun pages(): List<PageSummary> = get(url("/api/pages"))
+    suspend fun sidebar(): Sidebar = get(url("/api/sidebar"))
     /** Creates an empty page (or tag page) if it does not exist yet. */
     suspend fun ensurePage(name: String) {
         val (code, text) = call(request(url("/api/page/ensure", "name" to name)).post(ByteArray(0).toRequestBody(null)).build())
