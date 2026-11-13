@@ -24,10 +24,11 @@ private val COMMON_KEYWORDS = setOf(
     "await", "yield", "with", "pub", "mod", "use", "impl", "trait", "match", "where", "mut", "ref", "type", "void",
     "int", "long", "float", "double", "bool", "boolean", "char", "string", "package", "extends", "implements", "and",
     "or", "not", "elif", "pass", "raise", "except", "global", "go", "defer", "chan", "select", "loop", "unsafe",
-    "then", "fi", "esac", "done", "echo", "local", "export", "sudo", "when", "object", "override", "open", "data",
-    "select", "insert", "update", "delete", "where", "join", "into", "values", "create", "table", "drop", "alter",
-    "SELECT", "INSERT", "UPDATE", "DELETE", "WHERE", "FROM", "JOIN", "INTO", "VALUES", "CREATE", "TABLE", "AND", "OR",
+    "then", "fi", "esac", "done", "echo", "local", "export", "sudo", "when", "object", "override", "open",
 )
+
+/** SQL words: keywords only in SQL blocks (in a shell command "delete" is just a word). */
+private val SQL_KEYWORDS = setOf("select", "insert", "update", "delete", "where", "from", "join", "into", "values", "create", "table", "drop", "alter", "and", "or", "not", "null", "order", "by", "group", "limit", "as", "on", "set")
 
 /** How a language writes comments. */
 private fun lineComment(lang: String): List<String> = when (lang.lowercase()) {
@@ -51,6 +52,7 @@ private fun blockComments(lang: String): Boolean = when (lang.lowercase()) {
 fun highlight(code: String, lang: String, c: CodeColors): AnnotatedString = buildAnnotatedString {
     val comments = lineComment(lang)
     val blocks = blockComments(lang)
+    val sql = lang.equals("sql", ignoreCase = true)
     var i = 0
     val n = code.length
     fun startsWith(s: String) = code.startsWith(s, i)
@@ -86,7 +88,7 @@ fun highlight(code: String, lang: String, c: CodeColors): AnnotatedString = buil
                 while (j < n && (code[j].isLetterOrDigit() || code[j] == '_')) j++
                 val word = code.substring(i, j)
                 when {
-                    word in COMMON_KEYWORDS -> withStyle(SpanStyle(color = c.keyword)) { append(word) }
+                    word in COMMON_KEYWORDS || (sql && word.lowercase() in SQL_KEYWORDS) -> withStyle(SpanStyle(color = c.keyword)) { append(word) }
                     word.first().isUpperCase() && word.length > 1 && word.any { it.isLowerCase() } -> withStyle(SpanStyle(color = c.type)) { append(word) }
                     else -> append(word)
                 }

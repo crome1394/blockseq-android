@@ -21,7 +21,31 @@ sealed interface Target {
 }
 
 /** Colours the inline renderer uses (taken from the Material theme). */
-data class InlineColors(val link: Color, val tag: Color, val code: Color, val codeBackground: Color, val highlight: Color)
+data class InlineColors(val link: Color, val tag: Color, val code: Color, val codeBackground: Color, val highlight: Color, val dark: Boolean = true)
+
+private val TAG_HUES = intArrayOf(355, 22, 42, 95, 145, 172, 195, 215, 240, 265, 290, 322)
+
+/** The web app's tagHue (render.js): a stable hue per tag name, so a tag has one colour everywhere. */
+fun tagHue(name: String): Int {
+    var h = 2166136261L.toInt()
+    name.lowercase().codePoints().forEach { cp -> h = (h xor cp) * 16777619 }
+    h = h xor (h ushr 15)
+    h *= 0x2c1b3c6d
+    h = h xor (h ushr 12)
+    return TAG_HUES[(h.toUInt() % TAG_HUES.size.toUInt()).toInt()]
+}
+
+/** A tag's colour: text, and its light background, like the web app's coloured tags. */
+fun tagColors(name: String, dark: Boolean): Pair<Color, Color> {
+    val hue = tagHue(name).toFloat()
+    val text = if (dark) Color.hsl(hue, 0.62f, 0.72f) else Color.hsl(hue, 0.58f, 0.32f)
+    return text to text.copy(alpha = 0.14f)
+}
+
+private fun AnnotatedString.Builder.tag(name: String, c: InlineColors, onTap: (Target) -> Unit) {
+    val (fg, bg) = tagColors(name, c.dark)
+    link("#$name", Target.Page(name), SpanStyle(color = fg, background = bg), onTap)
+}
 
 private data class Rule(val regex: Regex, val apply: AnnotatedString.Builder.(MatchResult, InlineColors, (Target) -> Unit) -> Unit)
 
@@ -48,10 +72,10 @@ private val RULES: List<Rule> = listOf(
         link(m.groupValues[1], Target.Page(m.groupValues[1]), SpanStyle(color = c.link), tap)
     },
     Rule(Regex("""(?<=^|\s)#\[\[([^\]]+)\]\]""")) { m, c, tap ->
-        link("#" + m.groupValues[1], Target.Page(m.groupValues[1]), SpanStyle(color = c.tag), tap)
+        tag(m.groupValues[1], c, tap)
     },
     Rule(Regex("""(?<=^|\s)#($TAG_CHARS)""")) { m, c, tap ->
-        link("#" + m.groupValues[1], Target.Page(m.groupValues[1]), SpanStyle(color = c.tag), tap)
+        tag(m.groupValues[1], c, tap)
     },
     Rule(Regex("""(?<!!)\[([^\]]+)\]\((https?://[^)\s]+)\)""")) { m, c, tap ->
         link(m.groupValues[1], Target.Url(m.groupValues[2]), SpanStyle(color = c.link, textDecoration = TextDecoration.Underline), tap)

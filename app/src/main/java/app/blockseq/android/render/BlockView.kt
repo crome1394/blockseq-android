@@ -1,6 +1,7 @@
 package app.blockseq.android.render
 
 import android.util.LruCache
+import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -32,6 +33,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.blockseq.android.data.Api
@@ -85,6 +87,7 @@ private fun inlineColorsFor(dark: Boolean) = InlineColors(
     code = MaterialTheme.colorScheme.onSurfaceVariant,
     codeBackground = MaterialTheme.colorScheme.surfaceVariant,
     highlight = Color(0x66FFD54F),
+    dark = dark,
 )
 
 private val TASK_TAG = Regex("""(^|\s+)#task(?=\s|$)""", RegexOption.IGNORE_CASE)
@@ -103,7 +106,44 @@ fun BlockContent(
     modifier: Modifier = Modifier,
     /** Takes a picture out of this block (the picture viewer offers it); null: not offered. */
     onRemoveImage: ((src: String) -> Unit)? = null,
+    /** Managed properties already split out of [content] (the editor's blocks). */
+    props: Map<String, String> = emptyMap(),
+    /** How deep the block sits (for "auto" headings). */
+    depth: Int = 0,
 ) {
+    // Colour, alignment and heading props, from the editor or from the text itself.
+    val all = app.blockseq.android.outline.splitProps(content).second + props
+    val dark = MaterialTheme.colorScheme.background.luminanceApprox() < 0.5f
+    val bg = all["background-color"]?.let { rowColor(it, dark) }
+    val align = when (all["text-align"]) { "center" -> TextAlign.Center; "right" -> TextAlign.End; else -> TextAlign.Start }
+    val autoHeading = if (all["heading"] == "true") (depth + 2).coerceAtMost(4) else 0
+    Box(if (bg != null) modifier.background(bg, RoundedCornerShape(4.dp)).padding(horizontal = 8.dp, vertical = 2.dp) else modifier) {
+        BlockBody(content, statuses, api, onTap, onStatusTap, onRemoveImage, align, autoHeading)
+    }
+}
+
+/** The web app's row highlight colours (default theme), light and dark. */
+fun rowColor(name: String, dark: Boolean): Color? {
+    val light = mapOf("yellow" to 0xFFFBF1C7, "red" to 0xFFFBDCDC, "pink" to 0xFFFADCEC, "green" to 0xFFDCF2DF, "blue" to 0xFFDBE9FB, "purple" to 0xFFEBE1FA, "gray" to 0xFFEBEBE8)
+    val darkMap = mapOf("yellow" to 0xFF4A3F14, "red" to 0xFF4D2323, "pink" to 0xFF4A2338, "green" to 0xFF1F3D27, "blue" to 0xFF1E3350, "purple" to 0xFF352650, "gray" to 0xFF33373A)
+    return (if (dark) darkMap else light)[name]?.let { Color(it) }
+}
+
+/** The colour swatches the block menu offers (the web app's toolbar colours). */
+val SWATCHES = listOf("yellow" to 0xFFE6B400, "red" to 0xFFE5484D, "pink" to 0xFFE93D82, "green" to 0xFF30A46C, "blue" to 0xFF3B82F6, "purple" to 0xFF8E4EC6, "gray" to 0xFF8B8D98)
+
+@Composable
+private fun BlockBody(
+    content: String,
+    statuses: Statuses,
+    api: Api?,
+    onTap: (Target) -> Unit,
+    onStatusTap: (() -> Unit)?,
+    onRemoveImage: ((src: String) -> Unit)?,
+    align: TextAlign,
+    autoHeading: Int,
+) {
+    val modifier = Modifier
     // Managed property lines (background-color::, id::, …) are never shown, as in the web app.
     val visible = shownText(content)
     val st = statuses.of(visible)
@@ -117,7 +157,8 @@ fun BlockContent(
             when (part) {
                 is Part.Text -> Row {
                     if (index == 0 && st != null) StatusBadge(st, onStatusTap)
-                    val style = when (part.heading) {
+                    val level = if (part.heading == 0 && index == 0) autoHeading else part.heading
+                    val style = when (level) {
                         1 -> MaterialTheme.typography.headlineSmall
                         2 -> MaterialTheme.typography.titleLarge
                         3 -> MaterialTheme.typography.titleMedium
@@ -126,9 +167,9 @@ fun BlockContent(
                     }
                     Text(
                         inlineMarkdown(part.text, colors, onTap),
-                        style = style.copy(textDecoration = if (done) TextDecoration.LineThrough else null),
+                        style = style.copy(textDecoration = if (done) TextDecoration.LineThrough else null, textAlign = align),
                         color = if (done) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
-                        modifier = if (part.quote) Modifier.border(width = 0.dp, color = Color.Transparent).padding(start = 8.dp) else Modifier,
+                        modifier = (if (part.quote) Modifier.padding(start = 8.dp) else Modifier).let { if (align != TextAlign.Start) it.fillMaxWidth() else it },
                     )
                 }
                 is Part.Code -> CodeBlock(part.lang, part.code)
@@ -238,13 +279,28 @@ private fun CodeBlock(lang: String, code: String) {
     val dark = MaterialTheme.colorScheme.background.luminanceApprox() < 0.5f
     val colors = remember(dark) { codeColors(dark) }
     val text = remember(shown, lang, dark) { highlight(shown, lang, colors) }
+    val clipboard = androidx.compose.ui.platform.LocalClipboardManager.current
+    val context = androidx.compose.ui.platform.LocalContext.current
     Column(Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(6.dp))) {
-        Text(
-            text,
-            fontFamily = FontFamily.Monospace,
-            fontSize = 13.sp,
-            modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(10.dp),
-        )
+        Box(Modifier.fillMaxWidth()) {
+            // Long lines wrap: no sideways scrolling on a phone.
+            Text(
+                text,
+                fontFamily = FontFamily.Monospace,
+                fontSize = 13.sp,
+                softWrap = true,
+                modifier = Modifier.fillMaxWidth().padding(start = 10.dp, top = 10.dp, bottom = 10.dp, end = 40.dp),
+            )
+            androidx.compose.material3.IconButton(
+                onClick = {
+                    clipboard.setText(androidx.compose.ui.text.AnnotatedString(code))
+                    android.widget.Toast.makeText(context, "Code copied", android.widget.Toast.LENGTH_SHORT).show()
+                },
+                modifier = Modifier.align(androidx.compose.ui.Alignment.TopEnd).testTag("code-copy"),
+            ) {
+                androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.Filled.ContentCopy, "Copy code", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
         if (long) {
             Text(
                 if (open) "Fold" else "Show all ${lines.size} lines",

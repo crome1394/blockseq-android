@@ -147,3 +147,13 @@ class TagTest {
         scope.coroutineContext[kotlinx.coroutines.Job]!!.cancel()
     }
 }
+
+class TagHueTest {
+    @org.junit.Test
+    fun hueMatchesTheWebApp() {
+        // Values from the web app's tagHue (render.js), run in Deno.
+        val expected = mapOf("devices" to 172, "proxmox" to 290, "Instructions" to 355, "Blockseq" to 95, "coding" to 42,
+            "claude" to 22, "grok" to 355, "asustor" to 355, "home lab" to 215, "café" to 290)
+        for ((tag, hue) in expected) assertEquals(tag, hue, app.blockseq.android.render.tagHue(tag))
+    }
+}

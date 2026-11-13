@@ -93,7 +93,7 @@ import kotlinx.serialization.json.jsonPrimitive
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
-fun PageScreen(model: AppModel, name: String, onOpen: (String) -> Unit, onBack: () -> Unit) {
+fun PageScreen(model: AppModel, name: String, onOpen: (String) -> Unit, quickNote: Boolean = false, onBack: () -> Unit) {
     val api = model.api ?: return
     val scope = rememberCoroutineScope()
     val editor = remember(name, model.generation, api) {
@@ -116,6 +116,7 @@ fun PageScreen(model: AppModel, name: String, onOpen: (String) -> Unit, onBack: 
     var field by remember(editor) { mutableStateOf(TextFieldValue("")) }
     var unlocking by remember { mutableStateOf(false) }
     var tagging by remember(editor) { mutableStateOf<Node?>(null) }
+    var menuFor by remember(editor) { mutableStateOf<Node?>(null) }
     val uri = LocalUriHandler.current
     val onTap: (Target) -> Unit = { t ->
         when (t) {
@@ -131,6 +132,10 @@ fun PageScreen(model: AppModel, name: String, onOpen: (String) -> Unit, onBack: 
     fun stopEdit() {
         editing = null
         scope.launch { editor.save() }
+    }
+    // The journal's quick-note button: once loaded, type on the last row (a new one unless it is empty).
+    LaunchedEffect(editor, editor.loaded) {
+        if (quickNote && editor.loaded && editing == null) startEdit(editor.noteRow())
     }
 
     // Pictures from the phone: uploaded to the workbook's assets, then put at
@@ -249,7 +254,7 @@ fun PageScreen(model: AppModel, name: String, onOpen: (String) -> Unit, onBack: 
                 items(rows, key = { it.node.id }) { row ->
                     val n = row.node
                     Row(Modifier.fillMaxWidth().padding(start = (12 + row.depth * 20).dp, end = 12.dp, top = 4.dp, bottom = 4.dp)) {
-                        Bullet(n, editor) { editor.toggleCollapse(n) }
+                        Bullet(n, editor, numberOf(n)) { editor.toggleCollapse(n) }
                         Spacer(Modifier.width(8.dp))
                         if (n.id == editingId) {
                             val focus = remember { FocusRequester() }
@@ -276,7 +281,7 @@ fun PageScreen(model: AppModel, name: String, onOpen: (String) -> Unit, onBack: 
                             )
                         } else {
                             // Tap to edit; press and hold to add a tag (any block, children too).
-                            Box(Modifier.weight(1f).combinedClickable(onClick = { if (!editor.isLocked(n)) startEdit(n) }, onLongClick = { tagging = n }).testTag("block")) {
+                            Box(Modifier.weight(1f).combinedClickable(onClick = { if (!editor.isLocked(n)) startEdit(n) }, onLongClick = { menuFor = n }).testTag("block")) {
                                 if (editor.isLocked(n)) {
                                     Column {
                                         BlockContent(n.content, model.statuses, api, onTap, null)
@@ -290,7 +295,7 @@ fun PageScreen(model: AppModel, name: String, onOpen: (String) -> Unit, onBack: 
                                 } else if (n.content.isBlank()) {
                                     Text(" ", style = MaterialTheme.typography.bodyLarge)
                                 } else {
-                                    BlockContent(n.content, model.statuses, api, onTap, { editor.cycleStatus(n) }, onRemoveImage = { src -> editor.removeImage(n, src) })
+                                    BlockContent(n.content, model.statuses, api, onTap, { editor.cycleStatus(n) }, onRemoveImage = { src -> editor.removeImage(n, src) }, props = n.props, depth = row.depth)
                                 }
                             }
                         }
@@ -325,6 +330,9 @@ fun PageScreen(model: AppModel, name: String, onOpen: (String) -> Unit, onBack: 
         }
     }
     if (unlocking) UnlockDialog(model) { unlocking = false }
+    menuFor?.let { n ->
+        BlockMenu(editor, n, model.store.server, onTag = { menuFor = null; tagging = n }, onClose = { menuFor = null; scope.launch { editor.save() } })
+    }
     tagging?.let { n ->
         TagDialog(model, n.content, onPick = { tag -> editor.addTag(n, tag); tagging = null; scope.launch { editor.save() } }, onClose = { tagging = null })
     }
@@ -338,8 +346,13 @@ fun PageScreen(model: AppModel, name: String, onOpen: (String) -> Unit, onBack: 
 }
 
 @Composable
-private fun Bullet(n: Node, editor: PageEditor, onToggle: () -> Unit) {
+private fun Bullet(n: Node, editor: PageEditor, number: Int?, onToggle: () -> Unit) {
     val hasKids = n.children.isNotEmpty() || editor.isLocked(n)
+    if (number != null) {
+        // A numbered list item (logseq.order-list-type:: number), as in the web app.
+        Text("$number.", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 2.dp).clickable(enabled = hasKids, onClick = onToggle))
+        return
+    }
     Box(Modifier.padding(top = 9.dp).size(16.dp).clickable(enabled = hasKids, onClick = onToggle), contentAlignment = Alignment.Center) {
         val color = MaterialTheme.colorScheme.onSurfaceVariant
         Box(
@@ -462,3 +475,13 @@ private fun LockButton(unlocked: Boolean, onLock: () -> Unit, onUnlock: () -> Un
 
 /** "Oct 29th, 2026": the server's journal page names. */
 internal fun isJournalName(name: String) = Regex("""^[A-Z][a-z]{2} \d{1,2}(st|nd|rd|th), \d{4}$""").matches(name)
+
+/** The number of a numbered list item: its place among the numbered siblings right before it. */
+internal fun numberOf(n: Node): Int? {
+    if (n.props[app.blockseq.android.editor.NUMBERED] != "number") return null
+    val siblings = n.parent?.children ?: return 1
+    var count = 1
+    var i = siblings.indexOf(n) - 1
+    while (i >= 0 && siblings[i].props[app.blockseq.android.editor.NUMBERED] == "number") { count++; i-- }
+    return count
+}

@@ -229,6 +229,12 @@ class PageEditor(
         return n
     }
 
+    /** The row a quick note goes on: the last top-level block if it is empty, else a new one at the end. */
+    fun noteRow(): Node {
+        val last = root.children.lastOrNull()
+        return if (last != null && last.content.isBlank() && last.children.isEmpty()) last else appendBlock()
+    }
+
     /** A new empty block at the end of the page (saved once it has text). */
     fun addAtEnd(): Node = appendBlock()
 
@@ -328,6 +334,61 @@ class PageEditor(
         setText(n, lines.joinToString("\n"))
     }
 
+    /** Sets or clears a managed property (colour, alignment, list type, auto heading). */
+    fun setProp(n: Node, key: String, value: String?) {
+        if (value == null) n.props.remove(key) else n.props[key] = value
+        changed()
+    }
+
+    /** A Markdown heading (1–6), 0 for none; "auto" sizes it by depth (heading:: true), as the web app does. */
+    fun setHeading(n: Node, level: Int, auto: Boolean = false) {
+        val marker = statuses.prefix(n.content)
+        val rest = n.content.substring(marker.length).replace(Regex("^#{1,6} "), "")
+        n.content = marker + (if (level in 1..6) "#".repeat(level) + " " else "") + rest
+        if (auto) n.props[HEADING] = "true" else n.props.remove(HEADING)
+        changed()
+    }
+
+    fun toggleNumbered(n: Node) {
+        if (n.props[NUMBERED] == "number") n.props.remove(NUMBERED) else n.props[NUMBERED] = "number"
+        changed()
+    }
+
+    /** Adds "[[Nov 12th, 2026]] 14:05" before the trailing tags of the first line (web editor addTimestamp). */
+    fun addTimestamp(n: Node, stamp: String) {
+        val text = n.content
+        val nl = text.indexOf('\n')
+        val first = if (nl == -1) text else text.substring(0, nl)
+        val rest = text.substring(first.length)
+        n.content = when {
+            first.isBlank() -> stamp + rest
+            first.startsWith("```") || Regex("""^\s*\|""").containsMatchIn(first) -> "$stamp\n$text"
+            else -> {
+                val tags = Regex("""((?:\s+(?:#\[\[[^\]\n]+\]\]|#[^\s#,.!?;:()\[\]"'`]+))*)\s*$""").find(first)!!
+                val cut = tags.range.first
+                "${first.substring(0, cut)} $stamp${first.substring(cut)}$rest"
+            }
+        }
+        changed()
+    }
+
+    /** One block and its children as Logseq Markdown (no ids), or as indented plain text. */
+    fun export(n: Node, plain: Boolean): String {
+        val lines = mutableListOf<String>()
+        fun walk(x: Node, depth: Int) {
+            val ind = "\t".repeat(depth)
+            if (plain) x.content.split('\n').forEach { lines += ind + it }
+            else {
+                val parts = app.blockseq.android.outline.joinProps(x.content, x.props.filterKeys { it != ENCRYPTED }).split('\n')
+                lines += "$ind- ${parts.first()}"
+                parts.drop(1).forEach { lines += "$ind  $it" }
+            }
+            if (!isLocked(x)) x.children.forEach { walk(it, depth + 1) }
+        }
+        walk(n, 0)
+        return lines.joinToString("\n")
+    }
+
     fun cycleStatus(n: Node) {
         n.content = statuses.with(n.content, statuses.next(statuses.of(n.content)?.word))
         changed()
@@ -416,3 +477,9 @@ class PageEditor(
         load()
     }
 }
+
+/** Managed properties (stored the way Logseq writes them). */
+const val COLOR = "background-color"
+const val ALIGN = "text-align"
+const val HEADING = "heading"
+const val NUMBERED = "logseq.order-list-type"
