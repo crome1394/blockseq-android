@@ -94,12 +94,19 @@ fun BlockMenu(editor: PageEditor, n: Node, server: String, onTag: () -> Unit, on
     }
     // Read through the editor's revision so the sheet shows the current state.
     editor.revision
-    ModalBottomSheet(onDismissRequest = onClose, sheetState = sheet, modifier = Modifier.testTag("block-menu")) {
-        Column(Modifier.verticalScroll(rememberScrollState()).navigationBarsPadding().padding(bottom = 12.dp)) {
-            // An X at the top right closes the menu (as a swipe down or a tap outside does).
-            Row(Modifier.fillMaxWidth().padding(end = 4.dp), horizontalArrangement = Arrangement.End) {
-                androidx.compose.material3.IconButton(onClick = onClose, modifier = Modifier.testTag("menu-close")) { Icon(androidx.compose.material.icons.Icons.Filled.Close, "Close") }
+    ModalBottomSheet(
+        onDismissRequest = onClose, sheetState = sheet, modifier = Modifier.testTag("block-menu"),
+        // The grab handle with an X beside it at the top right, on one line.
+        dragHandle = {
+            Box(Modifier.fillMaxWidth()) {
+                androidx.compose.material3.BottomSheetDefaults.DragHandle(Modifier.align(Alignment.Center))
+                androidx.compose.material3.IconButton(onClick = onClose, modifier = Modifier.align(Alignment.CenterEnd).padding(end = 4.dp).testTag("menu-close")) {
+                    Icon(androidx.compose.material.icons.Icons.Filled.Close, "Close")
+                }
             }
+        },
+    ) {
+        Column(Modifier.verticalScroll(rememberScrollState()).navigationBarsPadding().padding(bottom = 12.dp)) {
             // Colour: the row highlight.
             Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 SWATCHES.forEach { (name, rgb) ->
