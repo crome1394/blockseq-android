@@ -85,6 +85,26 @@ ignored.
   `POST /api/assets` and its Markdown goes at the cursor of the block being
   edited, or into a new block at the end.
 
+## Reading and tagging
+
+- Code blocks are coloured by `render/Highlight.kt` (in-house: keywords,
+  strings, comments, numbers, type names) and long ones fold like the web
+  app (Settings → Code blocks; those settings live in each browser, so the
+  phone keeps its own copy with the same defaults).
+- Linked references start each group with an icon that opens the page they
+  live on (a calendar for a journal). Property lines the web app hides are
+  never shown.
+- Press and hold any block for `TagDialog`: the workbook's tags (from
+  `GET /api/pages`, most used first, not `#task`), filtered as you type, or a
+  new one. `PageEditor.addTag` puts it at the end of the first line
+  (`#[[two words]]` when needed; after the text of a block that starts with
+  code) unless the block already has it.
+- Settings → Controls at the bottom (on by default) moves action buttons
+  (picture viewer, page actions) to the bottom edge (`LocalControlsAtBottom`).
+- *Take a photo* uses the phone's camera app; on phones whose camera app does
+  not take capture requests it falls back to `CameraScreen` (CameraX), which
+  asks for the camera permission the first time.
+
 ## Encrypted blocks
 
 Byte-compatible with `web/js/crypto.js` and `src/crypto.rs` in the server

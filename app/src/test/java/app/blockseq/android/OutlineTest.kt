@@ -124,3 +124,26 @@ class ShownTextTest {
         assertEquals(false, app.blockseq.android.ui.isJournalName("HP EliteDesk 800 G6"))
     }
 }
+
+class TagTest {
+    private fun editor(scope: kotlinx.coroutines.CoroutineScope) = app.blockseq.android.editor.PageEditor(
+        app.blockseq.android.data.Api("http://localhost:1", null, "main"), "Test", Statuses.DEFAULT, null, scope, {},
+    )
+
+    @org.junit.Test
+    fun tagsGoAtTheEndOfTheFirstLineOnce() {
+        val scope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Job())
+        val e = editor(scope)
+        val n = app.blockseq.android.outline.Node("a", "Claude used these commands #proxmox\nsecond line")
+        e.addTag(n, "Instructions")
+        assertEquals("Claude used these commands #proxmox #Instructions\nsecond line", n.content)
+        e.addTag(n, "#instructions") // already there, any case
+        assertEquals("Claude used these commands #proxmox #Instructions\nsecond line", n.content)
+        e.addTag(n, "home lab")
+        assertEquals("Claude used these commands #proxmox #Instructions #[[home lab]]\nsecond line", n.content)
+        val code = app.blockseq.android.outline.Node("b", "```sh\nls\n```")
+        e.addTag(code, "scripts")
+        assertEquals("```sh\nls\n```\n#scripts", code.content)
+        scope.coroutineContext[kotlinx.coroutines.Job]!!.cancel()
+    }
+}

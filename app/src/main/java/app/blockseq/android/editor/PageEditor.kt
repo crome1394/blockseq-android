@@ -311,6 +311,23 @@ class PageEditor(
         return n
     }
 
+    /**
+     * Adds a #tag at the end of a block's first line (as the web app shows
+     * tags), unless the block already has it. A block that starts with a
+     * code fence gets the tag on a line after its text.
+     */
+    fun addTag(n: Node, tag: String) {
+        val name = tag.trim().removePrefix("#").removePrefix("[[").removeSuffix("]]").trim()
+        if (name.isEmpty()) return
+        val text = if (Regex("""[\s#,.!?;:()\[\]"'`]""").containsMatchIn(name)) "#[[$name]]" else "#$name"
+        val has = Regex("""(^|\s)#(\[\[)?""" + Regex.escape(name) + """(\]\])?(?=\s|$)""", RegexOption.IGNORE_CASE)
+        if (has.containsMatchIn(n.content)) return
+        val lines = n.content.split('\n').toMutableList()
+        if (lines.first().trimStart().startsWith("```")) lines += text
+        else lines[0] = lines[0].trimEnd().let { if (it.isEmpty()) text else "$it $text" }
+        setText(n, lines.joinToString("\n"))
+    }
+
     fun cycleStatus(n: Node) {
         n.content = statuses.with(n.content, statuses.next(statuses.of(n.content)?.word))
         changed()

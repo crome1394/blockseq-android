@@ -4,6 +4,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -89,7 +91,7 @@ import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.jsonPrimitive
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun PageScreen(model: AppModel, name: String, onOpen: (String) -> Unit, onBack: () -> Unit) {
     val api = model.api ?: return
@@ -113,6 +115,7 @@ fun PageScreen(model: AppModel, name: String, onOpen: (String) -> Unit, onBack: 
     val editingId = editing?.id
     var field by remember(editor) { mutableStateOf(TextFieldValue("")) }
     var unlocking by remember { mutableStateOf(false) }
+    var tagging by remember(editor) { mutableStateOf<Node?>(null) }
     val uri = LocalUriHandler.current
     val onTap: (Target) -> Unit = { t ->
         when (t) {
@@ -272,7 +275,8 @@ fun PageScreen(model: AppModel, name: String, onOpen: (String) -> Unit, onBack: 
                                 colors = TextFieldDefaults.colors(focusedContainerColor = Color.Transparent, unfocusedContainerColor = Color.Transparent),
                             )
                         } else {
-                            Box(Modifier.weight(1f).clickable { if (!editor.isLocked(n)) startEdit(n) }.testTag("block")) {
+                            // Tap to edit; press and hold to add a tag (any block, children too).
+                            Box(Modifier.weight(1f).combinedClickable(onClick = { if (!editor.isLocked(n)) startEdit(n) }, onLongClick = { tagging = n }).testTag("block")) {
                                 if (editor.isLocked(n)) {
                                     Column {
                                         BlockContent(n.content, model.statuses, api, onTap, null)
@@ -321,6 +325,9 @@ fun PageScreen(model: AppModel, name: String, onOpen: (String) -> Unit, onBack: 
         }
     }
     if (unlocking) UnlockDialog(model) { unlocking = false }
+    tagging?.let { n ->
+        TagDialog(model, n.content, onPick = { tag -> editor.addTag(n, tag); tagging = null; scope.launch { editor.save() } }, onClose = { tagging = null })
+    }
     val shot = cameraFile
     if (builtInCamera && shot != null) {
         CameraScreen(shot) { taken ->

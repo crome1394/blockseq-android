@@ -9,6 +9,8 @@ The first version. Needs a Blockseq server with device pairing.
 
 ### Added
 
+- Press and hold any block to add a tag: the workbook's tags, filtered as you type, or a new one. (tags commit)
+- Take a photo works on phones whose camera app refuses capture requests (it crashed before): a built-in camera stands in. Settings → Controls at the bottom, a coloured padlock (amber locked, green open), yellow stars. (`46d6358`, `1c2a044`)
 - Linked references have an icon on the left that opens the page they live on (a calendar for a journal), apart from the links in the text. Hidden property lines such as `background-color::` are no longer shown. (`6fead46`)
 - Code blocks have syntax colours, and long ones start folded with a *Show all* bar (Settings → Code blocks, the web app's defaults: fold above 20 lines, show 6). ``text`` shows as inline code. (`3894a75`)
 - Pictures: thumbnails in journals and pages (inline ones too), a full-screen viewer with zoom, share, save to the phone, remove from block and delete from server, and adding pictures from the camera or the phone. (`70af61a`)

@@ -18,8 +18,11 @@ phone, straight from your own server.
 | **Read** | Journals, pages, links, tags, task badges, tables, code and tips |
 | **Pictures** | Shown as thumbnails; tap for full screen with zoom, share, save to the phone, remove or delete |
 | **Add pictures** | Take a photo or choose one from the phone, into the block you are editing |
+| **Thumb-friendly** | Action buttons along the bottom of the screen (a setting) |
 | **Left pane** | The ☰ menu: sections, starred pages, workbooks, settings |
 | **Edit** | Tap a block to edit; Enter splits it; indent, outdent, move, delete from a toolbar |
+| **Tags** | Press and hold any block to pick a tag or create one |
+| **Code** | Syntax colours; long blocks fold, as in the web app |
 | **Tasks** | Every open task in one list; tap a badge to step its status (it stays a few seconds, so you can tap on) |
 | **Search** | Full-text search, with the field at the top or bottom (Settings) |
 | **Encrypted blocks** | `#Encrypted` blocks unlock with your password and decrypt on the phone |
