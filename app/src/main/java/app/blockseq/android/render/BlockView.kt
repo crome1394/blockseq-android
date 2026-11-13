@@ -117,7 +117,8 @@ fun BlockContent(
     val bg = all["background-color"]?.let { rowColor(it, dark) }
     val align = when (all["text-align"]) { "center" -> TextAlign.Center; "right" -> TextAlign.End; else -> TextAlign.Start }
     val autoHeading = if (all["heading"] == "true") (depth + 2).coerceAtMost(4) else 0
-    Box(if (bg != null) modifier.background(bg, RoundedCornerShape(4.dp)).padding(horizontal = 8.dp, vertical = 2.dp) else modifier) {
+    // A colour fills the row out to the right edge, as on the web (not just behind the text).
+    Box(if (bg != null) modifier.fillMaxWidth().background(bg, RoundedCornerShape(4.dp)).padding(horizontal = 8.dp, vertical = 2.dp) else modifier) {
         BlockBody(content, statuses, api, onTap, onStatusTap, onRemoveImage, align, autoHeading)
     }
 }

@@ -9,6 +9,7 @@ The first version. Needs a Blockseq server with device pairing.
 
 ### Added
 
+- Row colours fill the whole row out to the right edge, as on the web, and show at once when picked in the block menu (they used to wait for the page to reload).
 - Calendar weekday letters are bright red; Settings → Display → First day of the week (Sunday, Monday or Saturday).
 - The Differences card can be dragged around the screen by its title.
 - Widget notes go in as children of the day's date row (`[[Nov 13th, 2026]]`, made with the day's first note), so the Scratchpad reads as one block per day with that day's notes under it.

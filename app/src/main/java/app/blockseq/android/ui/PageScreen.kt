@@ -509,7 +509,7 @@ fun PageScreen(model: AppModel, name: String, onOpen: (String) -> Unit, quickNot
                                 } else if (n.content.isBlank()) {
                                     Text(" ", style = MaterialTheme.typography.bodyLarge)
                                 } else {
-                                    BlockContent(n.content, model.statuses, api, onTap, { editor.cycleStatus(n) }, onRemoveImage = { src -> editor.removeImage(n, src) }, props = n.props, depth = row.depth)
+                                    BlockContent(n.content, model.statuses, api, onTap, { editor.cycleStatus(n) }, onRemoveImage = { src -> editor.removeImage(n, src) }, props = n.props.toMap(), depth = row.depth)
                                 }
                             }
                         }
