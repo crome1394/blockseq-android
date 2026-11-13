@@ -28,6 +28,7 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.FormatAlignCenter
 import androidx.compose.material.icons.filled.FormatListNumbered
 import androidx.compose.material.icons.filled.Link
+import androidx.compose.material.icons.filled.FormatStrikethrough
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.ContentCopy
@@ -122,6 +123,7 @@ fun BlockMenu(editor: PageEditor, n: Node, server: String, onTag: () -> Unit, on
             }
             HorizontalDivider(Modifier.padding(vertical = 4.dp))
             Item(Icons.AutoMirrored.Filled.Label, "Add tag…", "menu-tag") { onTag() }
+            Item(Icons.Filled.FormatStrikethrough, "Strikethrough", "menu-strike") { editor.toggleStrike(n); onClose() }
             Item(Icons.Filled.Schedule, "Add timestamp") {
                 val time = LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm"))
                 editor.addTimestamp(n, "[[${journalName(LocalDate.now())}]] $time")

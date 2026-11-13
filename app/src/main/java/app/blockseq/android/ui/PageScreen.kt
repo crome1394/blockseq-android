@@ -79,6 +79,7 @@ import java.io.File
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.material.icons.filled.FormatStrikethrough
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import app.blockseq.android.AppModel
@@ -233,6 +234,23 @@ fun PageScreen(model: AppModel, name: String, onOpen: (String) -> Unit, quickNot
                         field = TextFieldValue(t, TextRange(field.selection.start + 1))
                         editor.setText(node, t)
                     },
+                    onStrike = {
+                        // A selection is struck through; without one, the line the cursor is on.
+                        val (t, a, b) = if (!field.selection.collapsed) {
+                            app.blockseq.android.editor.toggleSelection(field.text, field.selection.min, field.selection.max, "~~")
+                        } else {
+                            val c = field.selection.start
+                            val ls = field.text.lastIndexOf('\n', c - 1) + 1
+                            val le = field.text.indexOf('\n', c).let { if (it == -1) field.text.length else it }
+                            val line = field.text.substring(ls, le)
+                            val prefix = if (ls == 0) model.statuses.prefix(line) else ""
+                            val nt = field.text.substring(0, ls) + app.blockseq.android.editor.toggleLine(line, "~~", prefix) + field.text.substring(le)
+                            val pos = (c + nt.length - field.text.length).coerceIn(ls, nt.length)
+                            Triple(nt, pos, pos)
+                        }
+                        field = TextFieldValue(t, TextRange(a, b))
+                        editor.setText(node, t)
+                    },
                     onDelete = {
                         val above = editor.delete(node)
                         if (above != null) startEdit(above) else stopEdit()
@@ -374,7 +392,7 @@ private fun TextButtonRow(label: String, onClick: () -> Unit) {
 @Composable
 private fun EditBar(
     onOutdent: () -> Unit, onIndent: () -> Unit, onUp: () -> Unit, onDown: () -> Unit,
-    onStatus: () -> Unit, onLineBreak: () -> Unit, onDelete: () -> Unit, onDone: () -> Unit,
+    onStatus: () -> Unit, onLineBreak: () -> Unit, onStrike: () -> Unit, onDelete: () -> Unit, onDone: () -> Unit,
     picture: @Composable () -> Unit,
 ) {
     Surface(tonalElevation = 3.dp, modifier = Modifier.imePadding()) {
@@ -387,6 +405,7 @@ private fun EditBar(
             IconButton(onClick = onDown) { Icon(Icons.Filled.ArrowDownward, "Move down") }
             IconButton(onClick = onStatus) { Icon(Icons.Filled.CheckBox, "Next task status") }
             IconButton(onClick = onLineBreak) { Icon(Icons.Filled.KeyboardReturn, "New line in this block") }
+            IconButton(onClick = onStrike, modifier = Modifier.testTag("edit-strike")) { Icon(Icons.Filled.FormatStrikethrough, "Strikethrough") }
             picture()
             IconButton(onClick = onDelete) { Icon(Icons.Filled.Delete, "Delete block") }
           }

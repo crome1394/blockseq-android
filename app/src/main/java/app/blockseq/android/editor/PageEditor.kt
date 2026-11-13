@@ -351,6 +351,13 @@ class PageEditor(
         changed()
     }
 
+    /** Strikes through the first line (or clears it); status, heading and trailing tags stay outside. */
+    fun toggleStrike(n: Node) {
+        val nl = n.content.indexOf('\n')
+        val first = if (nl == -1) n.content else n.content.substring(0, nl)
+        setText(n, toggleLine(first, "~~", statuses.prefix(first)) + (if (nl == -1) "" else n.content.substring(nl)))
+    }
+
     fun toggleNumbered(n: Node) {
         if (n.props[NUMBERED] == "number") n.props.remove(NUMBERED) else n.props[NUMBERED] = "number"
         changed()
@@ -486,3 +493,50 @@ const val COLOR = "background-color"
 const val ALIGN = "text-align"
 const val HEADING = "heading"
 const val NUMBERED = "logseq.order-list-type"
+
+private val TRAILING_TAG_RUN = Regex("""(?:\s+(?:#\[\[[^\]\n]+\]\]|#[^\s#,.!?;:()\[\]"'`+][^\s#,.!?;:()\[\]"'`]*))+\s*$""")
+private val MARKS = listOf("**", "_", "~~")
+
+private fun toggleMark(core: String, mark: String): String {
+    val m = mark.length
+    if (core.length >= 2 * m && core.startsWith(mark) && core.endsWith(mark)) return core.substring(m, core.length - m)
+    for (other in MARKS) {
+        val o = other.length
+        if (other != mark && core.length >= 2 * o && core.startsWith(other) && core.endsWith(other)) {
+            return other + toggleMark(core.substring(o, core.length - o), mark) + other
+        }
+    }
+    return if (core.isEmpty()) core else mark + core + mark
+}
+
+/**
+ * Toggles a mark (`~~`, `**`) around one line's text, as the web editor's
+ * `toggleLine`: a status word ([statusPrefix]), heading marker and trailing
+ * #tags stay outside. Code fences, tables and property lines are left alone.
+ */
+fun toggleLine(line: String, mark: String, statusPrefix: String = ""): String {
+    if (Regex("""^\s*(```|#\+|\|)""").containsMatchIn(line) || Regex("""^[\w.-]+:: """).containsMatchIn(line)) return line
+    var pre = statusPrefix
+    var rest = line.substring(pre.length)
+    val h = Regex("""^(\s*(?:#{1,6} |> )?)""").find(rest)!!.value
+    pre += h
+    rest = rest.substring(h.length)
+    var tail = ""
+    TRAILING_TAG_RUN.find(rest)?.takeIf { it.range.first > 0 }?.let { tail = rest.substring(it.range.first); rest = rest.substring(0, it.range.first) }
+    val ws = rest.length - rest.trimEnd().length
+    if (ws > 0) { tail = rest.substring(rest.length - ws) + tail; rest = rest.substring(0, rest.length - ws) }
+    return pre + toggleMark(rest, mark) + tail
+}
+
+/** Toggles a mark around the selection [start, end) of [text]; returns the text and the new selection. */
+fun toggleSelection(text: String, start: Int, end: Int, mark: String): Triple<String, Int, Int> {
+    val m = mark.length
+    val sel = text.substring(start, end)
+    return when {
+        sel.length >= 2 * m && sel.startsWith(mark) && sel.endsWith(mark) ->
+            Triple(text.substring(0, start) + sel.substring(m, sel.length - m) + text.substring(end), start, end - 2 * m)
+        start >= m && text.startsWith(mark, start - m) && text.startsWith(mark, end) ->
+            Triple(text.substring(0, start - m) + sel + text.substring(end + m), start - m, end - m)
+        else -> Triple(text.substring(0, start) + mark + sel + mark + text.substring(end), start + m, end + m)
+    }
+}

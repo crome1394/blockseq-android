@@ -100,7 +100,7 @@ ignored.
   stores (`background-color::`, `text-align::`, `heading::`,
   `logseq.order-list-type::`).
 - Press and hold any block for `BlockMenu`, a bottom sheet: colours,
-  headings, alignment, tag (`TagDialog`), timestamp, copy ref / URL /
+  headings, alignment, strikethrough (`toggleLine`, the web editor's rule), tag (`TagDialog`), timestamp, copy ref / URL /
   Markdown / plain text, share, cut, numbered list, delete.
 - In `TagDialog`: the workbook's tags (from
   `GET /api/pages`, most used first, not `#task`), filtered as you type, or a
