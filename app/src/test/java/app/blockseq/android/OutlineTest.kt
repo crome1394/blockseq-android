@@ -71,3 +71,21 @@ class OutlineTest {
         assertEquals(null, s.next("CANCELED"))
     }
 }
+
+class EnterTest {
+    @org.junit.Test
+    fun findsTheTypedNewline() {
+        assertEquals(5, app.blockseq.android.ui.newlineTyped("hello world", "hello\n world"))
+        // Autocorrect committed in the same edit.
+        assertEquals(10, app.blockseq.android.ui.newlineTyped("I recieve it", "I receive \nit"))
+        assertEquals(null, app.blockseq.android.ui.newlineTyped("abc", "abcd"))
+        assertEquals(null, app.blockseq.android.ui.newlineTyped("abcd", "abc"))
+    }
+
+    @org.junit.Test
+    fun codeFencesKeepTheirNewlines() {
+        val t = "Script\n```py\nx = 1\n```"
+        assertEquals(true, app.blockseq.android.ui.insideFence(t, t.indexOf("x = 1") + 5))
+        assertEquals(false, app.blockseq.android.ui.insideFence(t, 6))
+    }
+}

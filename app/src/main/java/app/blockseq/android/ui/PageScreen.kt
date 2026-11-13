@@ -178,11 +178,14 @@ fun PageScreen(model: AppModel, name: String, onOpen: (String) -> Unit, onBack: 
                             LaunchedEffect(n.id) { focus.requestFocus() }
                             TextField(
                                 value = field,
-                                onValueChange = { v ->
-                                    val old = field.text
-                                    // A typed newline splits the block, like Enter on a computer.
-                                    if (v.text.length == old.length + 1 && v.selection.collapsed && v.selection.start > 0 && v.text[v.selection.start - 1] == '\n') {
-                                        val at = v.selection.start - 1
+                                onValueChange = onChange@{ v ->
+                                    // A newline the keyboard just added splits the block, like Enter
+                                    // on a computer (inside a code block it stays a new line).
+                                    // After a split, the old block's field reports the same edit again,
+                                    // while the text state already belongs to the new block: ignore it.
+                                    if (editing?.id != n.id) return@onChange
+                                    val at = newlineTyped(field.text, v.text)
+                                    if (at != null && !insideFence(v.text, at)) {
                                         val fresh = editor.split(n, v.text.substring(0, at), v.text.substring(at + 1))
                                         startEdit(fresh, 0)
                                     } else {
@@ -292,3 +295,23 @@ private fun ConflictBar(c: Conflict, editor: PageEditor) {
         }
     }
 }
+
+/**
+ * Where a newline was just inserted, comparing the text before and after one
+ * keyboard edit (which may also commit an autocorrection). Null when the edit
+ * added no newline.
+ */
+internal fun newlineTyped(old: String, new: String): Int? {
+    if (new.length <= old.length) return null
+    var p = 0
+    while (p < old.length && old[p] == new[p]) p++
+    var s = 0
+    while (s < old.length - p && old[old.length - 1 - s] == new[new.length - 1 - s]) s++
+    val inserted = new.substring(p, new.length - s)
+    val i = inserted.indexOf('\n')
+    return if (i == -1) null else p + i
+}
+
+/** The position is inside a ``` code fence that is still open there. */
+internal fun insideFence(text: String, at: Int): Boolean =
+    text.substring(0, at).lines().count { it.trimStart().startsWith("```") } % 2 == 1
