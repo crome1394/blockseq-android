@@ -74,7 +74,8 @@ import java.time.format.DateTimeFormatter
 fun BlockMenu(editor: PageEditor, n: Node, server: String, onTag: () -> Unit, onClose: () -> Unit) {
     val context = LocalContext.current
     val clipboard = LocalClipboardManager.current
-    val sheet = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    // Opens half way; dragging anywhere on it (not just the handle) pulls it up or down.
+    val sheet = rememberModalBottomSheetState(skipPartiallyExpanded = false)
     fun copy(text: String, what: String) {
         clipboard.setText(AnnotatedString(text))
         Toast.makeText(context, "$what copied", Toast.LENGTH_SHORT).show()
