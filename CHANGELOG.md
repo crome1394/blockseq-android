@@ -9,6 +9,8 @@ The first version. Needs a Blockseq server with device pairing.
 
 ### Added
 
+- Calendar weekday letters are bright red; Settings → Display → First day of the week (Sunday, Monday or Saturday).
+- The Differences card can be dragged around the screen by its title.
 - Widget notes go in as children of the day's date row (`[[Nov 13th, 2026]]`, made with the day's first note), so the Scratchpad reads as one block per day with that day's notes under it.
 - Conflicts: within a changed row, the words that differ are marked.
 - On the Journals tab, a swipe right opens the left pane.

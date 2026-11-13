@@ -121,6 +121,15 @@ fun SettingsScreen(model: AppModel, onBack: () -> Unit) {
                                     Text(label)
                                 }
                             }
+                            HorizontalDivider()
+                            Section("First day of the week")
+                            var weekStart by remember { mutableStateOf(model.store.weekStart) }
+                            listOf(7 to "Sunday", 1 to "Monday", 6 to "Saturday").forEach { (value, label) ->
+                                Row(Modifier.fillMaxWidth().clickable { weekStart = value; model.store.weekStart = value }.testTag("week-$value"), verticalAlignment = Alignment.CenterVertically) {
+                                    RadioButton(selected = weekStart == value, onClick = { weekStart = value; model.store.weekStart = value })
+                                    Text(label)
+                                }
+                            }
                         }
                         SettingsTab.Code -> {
                             Section("Code blocks")

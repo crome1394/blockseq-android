@@ -53,6 +53,10 @@ import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckBox
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.DragIndicator
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.material.icons.filled.KeyboardReturn
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.LockOpen
@@ -686,11 +690,26 @@ private fun ConflictDiffDialog(editor: PageEditor, onClose: () -> Unit) {
     val dark = androidx.compose.foundation.isSystemInDarkTheme()
     val red = if (dark) Color(0xFFFF8A80) else Color(0xFFB3261E)
     val green = if (dark) Color(0xFF81C784) else Color(0xFF1B5E20)
-    androidx.compose.material3.AlertDialog(
-        onDismissRequest = onClose,
-        title = { Text("Differences") },
-        text = {
-            Column {
+    // Drag the title bar to move the card around the screen (the list below still scrolls).
+    var offset by remember { mutableStateOf(Offset.Zero) }
+    // A full-screen window with the card inside, so the card can go anywhere on the screen.
+    androidx.compose.ui.window.Dialog(onDismissRequest = onClose, properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false)) {
+    Box(Modifier.fillMaxSize().clickable(interactionSource = null, indication = null, onClick = onClose).padding(16.dp), contentAlignment = Alignment.Center) {
+    androidx.compose.material3.Card(
+        Modifier.offset { androidx.compose.ui.unit.IntOffset(offset.x.toInt(), offset.y.toInt()) }
+            .fillMaxWidth().heightIn(max = 520.dp).clickable(interactionSource = null, indication = null) {},
+        shape = androidx.compose.foundation.shape.RoundedCornerShape(24.dp),
+        elevation = androidx.compose.material3.CardDefaults.cardElevation(8.dp),
+    ) {
+    Column(Modifier.padding(start = 20.dp, end = 20.dp, top = 16.dp, bottom = 8.dp)) {
+            Row(
+                Modifier.fillMaxWidth().pointerInput(Unit) { detectDragGestures { ch, by -> ch.consume(); offset += by } }.testTag("diff-handle"),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text("Differences", style = MaterialTheme.typography.headlineSmall, modifier = Modifier.weight(1f).padding(vertical = 8.dp))
+                Icon(Icons.Filled.DragIndicator, "Drag to move", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            Column(Modifier.weight(1f, fill = false)) {
                 Text("− only on the other device   + only on this phone", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(Modifier.height(8.dp))
                 if (lines.none { it.kind != app.blockseq.android.editor.DiffLine.Kind.Same }) Text("The text is the same; only hidden details (such as properties or folding) differ.")
@@ -720,15 +739,15 @@ private fun ConflictDiffDialog(editor: PageEditor, onClose: () -> Unit) {
                     }
                 }
             }
-        },
-        confirmButton = { androidx.compose.material3.TextButton(onClick = { onClose(); editor.keepMine() }) { Text("Keep mine") } },
-        dismissButton = {
-            Row {
+            Row(Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.End) {
                 androidx.compose.material3.TextButton(onClick = onClose) { Text("Close") }
                 androidx.compose.material3.TextButton(onClick = { onClose(); editor.useTheirs() }) { Text("Use theirs") }
+                androidx.compose.material3.TextButton(onClick = { onClose(); editor.keepMine() }) { Text("Keep mine") }
             }
-        },
-    )
+    }
+    }
+    }
+    }
 }
 
 /** Unchanged runs longer than 5 lines keep 2 at each end; null marks the fold. */

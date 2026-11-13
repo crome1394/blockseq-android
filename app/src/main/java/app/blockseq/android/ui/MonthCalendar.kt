@@ -39,10 +39,11 @@ import java.util.Locale
 /**
  * A month of days, as in the web app's left pane: a dot under days whose
  * journal has notes, today ringed; tap a day to open its journal. Weeks
- * start on Sunday (the web app's default).
+ * start on [firstDay] (Settings → Display; Sunday by default, as in the web app).
+ * The weekday letters are bright red.
  */
 @Composable
-fun MonthCalendar(days: Set<Long>, onDay: (LocalDate) -> Unit) {
+fun MonthCalendar(days: Set<Long>, firstDay: DayOfWeek = DayOfWeek.SUNDAY, onDay: (LocalDate) -> Unit) {
     val today = LocalDate.now()
     var month by remember { mutableStateOf(YearMonth.from(today)) }
     val primary = MaterialTheme.colorScheme.primary
@@ -58,11 +59,11 @@ fun MonthCalendar(days: Set<Long>, onDay: (LocalDate) -> Unit) {
             IconButton(onClick = { month = month.plusMonths(1) }) { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, "Next month") }
         }
         Row(Modifier.fillMaxWidth()) {
-            (listOf(DayOfWeek.SUNDAY) + DayOfWeek.entries.dropLast(1)).forEach {
-                Text(it.getDisplayName(TextStyle.NARROW, Locale.getDefault()), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1f), textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+            (0L until 7L).map { firstDay.plus(it) }.forEach {
+                Text(it.getDisplayName(TextStyle.NARROW, Locale.getDefault()), style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = WEEKDAY_RED, modifier = Modifier.weight(1f), textAlign = androidx.compose.ui.text.style.TextAlign.Center)
             }
         }
-        val lead = month.atDay(1).dayOfWeek.value % 7
+        val lead = Math.floorMod(month.atDay(1).dayOfWeek.value - firstDay.value, 7)
         val cells = (List(lead) { null } + (1..month.lengthOfMonth()).map { month.atDay(it) }).chunked(7)
         cells.forEach { week ->
             Row(Modifier.fillMaxWidth()) {
@@ -86,3 +87,6 @@ fun MonthCalendar(days: Set<Long>, onDay: (LocalDate) -> Unit) {
         }
     }
 }
+
+/** The weekday letters: bright red, readable on dark and light. */
+private val WEEKDAY_RED = androidx.compose.ui.graphics.Color(0xFFFF3B30)

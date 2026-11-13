@@ -266,7 +266,7 @@ private fun LeftPane(model: AppModel, current: Tab, onTab: (Tab) -> Unit, onOpen
         }
         // The calendar sits at the bottom of the pane; the list above scrolls if it runs long.
         HorizontalDivider(Modifier.padding(vertical = 4.dp))
-        MonthCalendar(days) { onOpen(journalName(it)) }
+        MonthCalendar(days, java.time.DayOfWeek.of(model.store.weekStart)) { onOpen(journalName(it)) }
     }
 }
 

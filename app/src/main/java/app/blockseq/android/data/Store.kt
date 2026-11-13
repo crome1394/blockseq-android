@@ -45,6 +45,11 @@ class Store(context: Context) {
         get() = prefs.getBoolean("search_bottom", false)
         set(v) = prefs.edit().putBoolean("search_bottom", v).apply()
 
+    /** The day weeks start on in calendars (java.time DayOfWeek value: 7 = Sunday, the default). */
+    var weekStart: Int
+        get() = prefs.getInt("week_start", 7)
+        set(v) = prefs.edit().putInt("week_start", v).apply()
+
     /** Paired: a server address, and a token unless the server needs none. */
     val paired: Boolean get() = server.isNotEmpty() && prefs.getBoolean("paired", false)
 
