@@ -9,6 +9,7 @@ The first version. Needs a Blockseq server with device pairing.
 
 ### Added
 
+- Journals: a calendar icon beside each date, row colours and other properties in the previews, encrypted children once unlocked, and a quick-note card on the pencil button that adds to the last row of today. The padlock is on the home screen too, and the left pane shows Connected / Offline and when the app last synced. (journal commit)
 - Coloured tags (the web's colours), row highlights, alignment, auto headings and numbered lists; the full block menu on press and hold; code blocks wrap and have a copy button. (`cd7f856`)
 - A + button on Pages for a new page or tag, a pencil on Journals for a quick note on today's journal; the Pages filter follows the top/bottom setting. (`e07b856`)
 - Press and hold any block to add a tag: the workbook's tags, filtered as you type, or a new one. (`a82d7c9`)

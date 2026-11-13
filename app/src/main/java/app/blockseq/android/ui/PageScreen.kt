@@ -97,7 +97,7 @@ fun PageScreen(model: AppModel, name: String, onOpen: (String) -> Unit, quickNot
     val api = model.api ?: return
     val scope = rememberCoroutineScope()
     val editor = remember(name, model.generation, api) {
-        PageEditor(api, name, model.statuses, model.key, scope, model::handle)
+        PageEditor(api, name, model.statuses, model.key, scope, model::handle, model::markSynced)
     }
     LaunchedEffect(editor) { editor.load() }
     // Live updates: another device saved this page.
@@ -460,18 +460,6 @@ private fun readPicture(context: android.content.Context, uri: android.net.Uri):
     return Triple(bytes, fileName, mime)
 }
 
-/**
- * The padlock for #Encrypted blocks, coloured so its state reads at a glance:
- * amber and closed while locked, green and open while unlocked.
- */
-@Composable
-private fun LockButton(unlocked: Boolean, onLock: () -> Unit, onUnlock: () -> Unit) {
-    if (unlocked) {
-        IconButton(onClick = onLock, modifier = Modifier.testTag("lock")) { Icon(Icons.Filled.LockOpen, "Lock encrypted blocks", tint = Color(0xFF43A047)) }
-    } else {
-        IconButton(onClick = onUnlock, modifier = Modifier.testTag("unlock-button")) { Icon(Icons.Filled.Lock, "Unlock encrypted blocks", tint = Color(0xFFFFA000)) }
-    }
-}
 
 /** "Oct 29th, 2026": the server's journal page names. */
 internal fun isJournalName(name: String) = Regex("""^[A-Z][a-z]{2} \d{1,2}(st|nd|rd|th), \d{4}$""").matches(name)

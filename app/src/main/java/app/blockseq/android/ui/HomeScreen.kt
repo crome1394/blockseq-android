@@ -1,6 +1,8 @@
 package app.blockseq.android.ui
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.background
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -24,6 +26,8 @@ import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.foundation.layout.Box
 import androidx.compose.material3.DrawerValue
@@ -91,12 +95,24 @@ fun HomeScreen(model: AppModel, onOpen: (String) -> Unit, onSettings: () -> Unit
     // Bumped by live updates from other devices, so lists reload.
     var changes by remember { mutableIntStateOf(0) }
     val api = model.api ?: return
+    // Live updates; reconnects after a dropped connection. The left pane shows the state.
     LaunchedEffect(api) {
-        api.events().catch { }.collect { ev ->
-            if (ev["client"]?.toString()?.trim('"') != api.clientId) changes++
+        while (true) {
+            api.events().catch { model.connected = false }.collect { ev ->
+                val type = ev["type"]?.toString()?.trim('"')
+                if (type == "_open") { model.connected = true; model.markSynced(); return@collect }
+                model.markSynced()
+                if (ev["client"]?.toString()?.trim('"') != api.clientId) changes++
+            }
+            model.connected = false
+            delay(5000)
         }
     }
+    var unlocking by remember { mutableStateOf(false) }
+    if (unlocking) UnlockDialog(model) { unlocking = false }
     var creating by remember { mutableStateOf(false) }
+    var noting by remember { mutableStateOf(false) }
+    if (noting) QuickNoteSheet(model, onOpenDay = { noting = false; onQuickNote(journalName(LocalDate.now())) }, onDone = { added -> noting = false; if (added) changes++ })
     if (creating) NewPageDialog(model, onDone = { name -> creating = false; name?.let(onOpen) })
     val drawer = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
@@ -111,14 +127,17 @@ fun HomeScreen(model: AppModel, onOpen: (String) -> Unit, onSettings: () -> Unit
             TopAppBar(
                 title = { Text(if (model.store.workbook == "main") "Blockseq" else model.store.workbook) },
                 navigationIcon = { IconButton(onClick = { scope.launch { drawer.open() } }, modifier = Modifier.testTag("menu")) { Icon(Icons.Filled.Menu, "Menu") } },
-                actions = { IconButton(onClick = onSettings, modifier = Modifier.testTag("settings")) { Icon(Icons.Filled.Settings, "Settings") } },
+                actions = {
+                    if (model.setup != null) LockButton(model.key != null, onLock = model::lock, onUnlock = { unlocking = true })
+                    IconButton(onClick = onSettings, modifier = Modifier.testTag("settings")) { Icon(Icons.Filled.Settings, "Settings") }
+                },
             )
         },
         floatingActionButton = {
             when (tab) {
                 // Pages: a new page or tag. Journals: a quick note on today's journal.
                 Tab.Pages -> FloatingActionButton(onClick = { creating = true }, modifier = Modifier.testTag("fab-new")) { Icon(Icons.Filled.Add, "New page or tag") }
-                Tab.Journals -> FloatingActionButton(onClick = { onQuickNote(journalName(LocalDate.now())) }, modifier = Modifier.testTag("fab-note")) { Icon(Icons.Filled.Edit, "Quick note on today's journal") }
+                Tab.Journals -> FloatingActionButton(onClick = { noting = true }, modifier = Modifier.testTag("fab-note")) { Icon(Icons.Filled.Edit, "Quick note on today's journal") }
                 else -> {}
             }
         },
@@ -164,7 +183,8 @@ private fun LeftPane(model: AppModel, current: Tab, onTab: (Tab) -> Unit, onOpen
     ModalDrawerSheet(Modifier.testTag("left-pane")) {
         LazyColumn {
             item {
-                Text("Blockseq", style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(start = 24.dp, top = 20.dp, bottom = 12.dp))
+                Text("Blockseq", style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(start = 24.dp, top = 20.dp))
+                ConnectionStatus(model)
             }
             items(Tab.entries.toList(), key = { "tab:" + it.name }) { t ->
                 NavigationDrawerItem(
@@ -224,7 +244,7 @@ private fun <T> Loader(model: AppModel, key: String, load: suspend () -> T, cont
     var refreshing by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     suspend fun fetch() {
-        runCatching { load() }.onSuccess { data = it; error = null }.onFailure { error = it.message ?: "Could not load"; model.handle(it) }
+        runCatching { load() }.onSuccess { data = it; error = null; model.markSynced() }.onFailure { error = it.message ?: "Could not load"; model.handle(it) }
     }
     LaunchedEffect(key) { fetch() }
     PullToRefreshBox(isRefreshing = refreshing, onRefresh = { scope.launch { refreshing = true; fetch(); refreshing = false } }) {
@@ -254,27 +274,42 @@ private fun JournalsTab(model: AppModel, key: String, onOpen: (String) -> Unit) 
 
 @Composable
 private fun JournalCard(name: String, blocks: List<app.blockseq.android.outline.Block>, model: AppModel, onOpen: (String) -> Unit, onTap: (Target) -> Unit) {
-    Column(Modifier.fillMaxWidth().clickable { onOpen(name) }.padding(horizontal = 16.dp, vertical = 12.dp)) {
-        Text(name, style = MaterialTheme.typography.titleLarge)
+    Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp)) {
+        // The calendar and the date open the day (as on linked references); links in the text open other pages.
+        Row(Modifier.fillMaxWidth().clickable { onOpen(name) }.testTag("journal-open"), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+            Icon(Icons.Filled.CalendarMonth, "Open $name", tint = app.blockseq.android.render.inlineColors().link, modifier = Modifier.padding(end = 10.dp).size(26.dp))
+            Text(name, style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(vertical = 4.dp))
+        }
         Spacer(Modifier.padding(top = 6.dp))
         if (blocks.isEmpty()) {
-            Text("Tap to write", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text("Tap the date to write", color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.clickable { onOpen(name) })
         } else {
-            // Top two levels as a preview; open the journal for everything.
+            // Top two levels as a preview; open the journal for everything. Properties
+            // (row colour, heading, alignment) come along, and encrypted children
+            // show once unlocked.
             val root = buildTree(blocks)
-            val preview = mutableListOf<Pair<Int, String>>()
-            root.children.forEach { c ->
-                preview += 0 to c.content
-                if (!c.collapsed && c.encryptedBlob == null) c.children.forEach { preview += 1 to it.content }
+            val key = model.key
+            val preview = mutableListOf<Triple<Int, app.blockseq.android.outline.Node, Boolean>>()
+            fun openKids(c: app.blockseq.android.outline.Node): List<app.blockseq.android.outline.Node> {
+                val blob = c.encryptedBlob ?: return c.children
+                if (key == null) return emptyList()
+                return runCatching { app.blockseq.android.outline.parseOutline(app.blockseq.android.crypto.BlockCrypto.decrypt(key, blob)) }.getOrNull().orEmpty()
             }
-            preview.take(12).forEach { (depth, text) ->
+            root.children.forEach { c ->
+                preview += Triple(0, c, c.encryptedBlob != null && key == null)
+                if (!c.collapsed) openKids(c).forEach { preview += Triple(1, it, false) }
+            }
+            preview.take(12).forEach { (depth, node, locked) ->
                 Row(Modifier.padding(start = (depth * 18).dp, top = 3.dp)) {
                     Text("•", color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Spacer(Modifier.width(8.dp))
-                    BlockContent(text, model.statuses, model.api, onTap, null)
+                    Column(Modifier.weight(1f)) {
+                        BlockContent(node.content, model.statuses, model.api, onTap, null, props = node.props, depth = depth)
+                        if (locked) Text("🔒 Encrypted", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
                 }
             }
-            if (preview.size > 12) Text("…", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            if (preview.size > 12) Text("… more", color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.clickable { onOpen(name) })
         }
     }
     HorizontalDivider()
@@ -474,4 +509,78 @@ private fun NewPageDialog(model: AppModel, onDone: (String?) -> Unit) {
         confirmButton = { androidx.compose.material3.TextButton(enabled = name.isNotBlank(), onClick = { create(false) }) { Text("Create page") } },
         dismissButton = { androidx.compose.material3.TextButton(enabled = name.isNotBlank(), onClick = { create(true) }) { Text("Create tag") } },
     )
+}
+
+/** Connected (live updates open) or not, and when the app last synced with the server. */
+@Composable
+private fun ConnectionStatus(model: AppModel) {
+    // Redraw "x min ago" every half minute.
+    var tick by remember { mutableIntStateOf(0) }
+    LaunchedEffect(Unit) { while (true) { delay(30_000); tick++ } }
+    tick
+    val color = if (model.connected) androidx.compose.ui.graphics.Color(0xFF43A047) else androidx.compose.ui.graphics.Color(0xFF9E9E9E)
+    Row(Modifier.padding(start = 24.dp, top = 6.dp, bottom = 12.dp).testTag("connection"), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+        androidx.compose.foundation.layout.Box(Modifier.size(10.dp).background(color, androidx.compose.foundation.shape.CircleShape))
+        Spacer(Modifier.width(8.dp))
+        val synced = model.lastSync?.let { "synced ${ago(it)}" } ?: "not synced yet"
+        Text((if (model.connected) "Connected" else "Offline") + " · " + synced, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+}
+
+private fun ago(ms: Long): String {
+    val s = (System.currentTimeMillis() - ms) / 1000
+    return when {
+        s < 60 -> "just now"
+        s < 3600 -> "${s / 60} min ago"
+        s < 86400 -> "${s / 3600} h ago"
+        else -> formatTime(ms)
+    }
+}
+
+/**
+ * The journal's pencil: a card that slides up with a text box. What is typed
+ * goes on the last row of today's journal (a new row unless the last is
+ * empty), saved with the same version check as any edit.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun QuickNoteSheet(model: AppModel, onOpenDay: () -> Unit, onDone: (added: Boolean) -> Unit) {
+    var text by remember { mutableStateOf("") }
+    var busy by remember { mutableStateOf(false) }
+    var error by remember { mutableStateOf<String?>(null) }
+    val scope = rememberCoroutineScope()
+    val focus = remember { androidx.compose.ui.focus.FocusRequester() }
+    LaunchedEffect(Unit) { focus.requestFocus() }
+    val today = journalName(LocalDate.now())
+    androidx.compose.material3.ModalBottomSheet(onDismissRequest = { if (!busy) onDone(false) }, sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+        Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(bottom = 16.dp).imePadding()) {
+            Text("Quick note · $today", style = MaterialTheme.typography.titleMedium)
+            OutlinedTextField(
+                text, { text = it }, placeholder = { Text("Write a note…") }, minLines = 3, maxLines = 8,
+                modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp).focusRequester(focus).testTag("quick-note"),
+            )
+            error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                androidx.compose.material3.TextButton(onClick = onOpenDay) { Text("Open the day") }
+                androidx.compose.material3.Button(
+                    enabled = text.isNotBlank() && !busy,
+                    modifier = Modifier.testTag("quick-note-add"),
+                    onClick = {
+                        val api = model.api ?: return@Button
+                        busy = true
+                        scope.launch {
+                            val editor = app.blockseq.android.editor.PageEditor(api, today, model.statuses, model.key, scope, model::handle, model::markSynced)
+                            editor.load()
+                            val row = editor.noteRow()
+                            editor.setText(row, text.trim())
+                            editor.save()
+                            busy = false
+                            if (editor.conflict == null && editor.error == null && !editor.dirty) onDone(true)
+                            else error = editor.error ?: "Could not add it (the day changed elsewhere); try again."
+                        }
+                    },
+                ) { Text(if (busy) "Adding…" else "Add") }
+            }
+        }
+    }
 }

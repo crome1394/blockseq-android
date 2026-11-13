@@ -175,6 +175,11 @@ class Api(private val base: String, private val token: String?, val workbook: St
         val source = EventSources.createFactory(sse).newEventSource(
             request(url("/api/events", global = true)).header("Accept", "text/event-stream").build(),
             object : EventSourceListener() {
+                override fun onOpen(eventSource: EventSource, response: Response) {
+                    // A marker, not a server event: the stream is connected.
+                    trySend(kotlinx.serialization.json.buildJsonObject { put("type", kotlinx.serialization.json.JsonPrimitive("_open")) })
+                }
+
                 override fun onEvent(eventSource: EventSource, id: String?, type: String?, data: String) {
                     runCatching { json.parseToJsonElement(data) as JsonObject }.getOrNull()?.let { trySend(it) }
                 }

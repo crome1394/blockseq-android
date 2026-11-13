@@ -51,6 +51,7 @@ class PageEditor(
     private val key: ByteArray?,
     private val scope: CoroutineScope,
     private val onUnpaired: (Throwable) -> Unit,
+    private val onSynced: () -> Unit = {},
 ) {
     var root: Node = Node("", "")
         private set
@@ -112,6 +113,7 @@ class PageEditor(
             apply(data.blocks, data.page?.version ?: 0)
             backlinks = data
             error = null
+            onSynced()
         } catch (e: Unpaired) {
             onUnpaired(e)
         } catch (e: Exception) {
@@ -421,6 +423,7 @@ class PageEditor(
                     version = r.page.version
                     if (overwrite) overwriteNext = false
                     lastSaved = System.currentTimeMillis()
+                    onSynced()
                     error = null
                     if (!saveAgain) dirty = false
                 }

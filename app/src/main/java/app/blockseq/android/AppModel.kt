@@ -40,6 +40,17 @@ class AppModel(app: Application) : AndroidViewModel(app) {
 
     var unpairedMessage by mutableStateOf<String?>(null)
 
+    /** The live-update stream to the server is open (shown in the left pane). */
+    var connected by mutableStateOf(false)
+
+    /** When something last loaded from or saved to the server. */
+    var lastSync by mutableStateOf<Long?>(null)
+        private set
+
+    fun markSynced() {
+        lastSync = System.currentTimeMillis()
+    }
+
     /** Settings → Controls at the bottom (kept in Store; here so screens redraw). */
     var controlsAtBottom by mutableStateOf(store.controlsAtBottom)
         private set
