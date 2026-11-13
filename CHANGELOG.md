@@ -9,6 +9,7 @@ The first version. Needs a Blockseq server with device pairing.
 
 ### Added
 
+- Horizontal lines: `---` (or `***`, `___`) on its own line draws a line in pages and the widget; the editing toolbar has a button that adds one, as the web's `/hr`.
 - Pages: the button opens a small menu (New page or tag, Filter). Filter shows a card with the text field and Pages / Journals / Starred / All; closing it shows every page again.
 - The picture viewer hides its bar after 3 seconds in landscape; tap the picture to bring it back.
 - Pictures added from the phone (camera or gallery) are set to quarter size (`{:size "quarter"}`), so they show at a quarter of their width in the web app.

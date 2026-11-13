@@ -138,7 +138,11 @@ sealed interface Part {
     data class Table(val rows: List<List<String>>) : Part
     data class Admonition(val kind: String, val text: String) : Part
     data class Image(val alt: String, val src: String) : Part
+    /** A horizontal line: `---`, `***` or `___` on a line of its own. */
+    data object Rule : Part
 }
+
+private val RULE_LINE = Regex("""^ {0,3}(?:-{3,}|\*{3,}|_{3,})\s*$""")
 
 private val IMAGE = Regex("""^!\[([^\]\n]*)\]\(([^)\s]+)\)(?:\{[^}\n]*\})?\s*$""")
 private val INLINE_IMAGE = Regex("""!\[([^\]\n]*)\]\(([^)\s]+)\)(?:\{[^}\n]*\})?""")
@@ -201,6 +205,7 @@ fun parts(content: String): List<Part> {
                 i--
                 out += Part.Table(rows)
             }
+            RULE_LINE.matches(line) -> { flush(); out += Part.Rule }
             IMAGE.matches(t) -> {
                 flush()
                 val m = IMAGE.find(t)!!

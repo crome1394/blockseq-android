@@ -172,6 +172,7 @@ private fun BlockBody(
                         modifier = (if (part.quote) Modifier.padding(start = 8.dp) else Modifier).let { if (align != TextAlign.Start) it.fillMaxWidth() else it },
                     )
                 }
+                is Part.Rule -> androidx.compose.material3.HorizontalDivider(Modifier.padding(vertical = 8.dp))
                 is Part.Code -> CodeBlock(part.lang, part.code)
                 is Part.Maths -> Text(
                     part.tex,

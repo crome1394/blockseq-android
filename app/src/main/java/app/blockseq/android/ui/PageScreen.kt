@@ -80,6 +80,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.material.icons.filled.FormatStrikethrough
+import androidx.compose.material.icons.filled.HorizontalRule
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import app.blockseq.android.AppModel
@@ -253,6 +254,18 @@ fun PageScreen(model: AppModel, name: String, onOpen: (String) -> Unit, quickNot
                         field = TextFieldValue(t, TextRange(a, b))
                         editor.setText(node, t)
                     },
+                    onRule = {
+                        // On a line of its own, as the web's /hr: here if the line is empty, otherwise after it.
+                        val c = field.selection.start
+                        val ls = field.text.lastIndexOf('\n', c - 1) + 1
+                        val le = field.text.indexOf('\n', c).let { if (it == -1) field.text.length else it }
+                        val line = field.text.substring(ls, le)
+                        val t = if (line.isBlank()) field.text.substring(0, ls) + "---" + field.text.substring(le)
+                            else field.text.substring(0, ls) + line.trimEnd() + "\n---" + field.text.substring(le)
+                        val pos = if (line.isBlank()) ls + 3 else ls + line.trimEnd().length + 4
+                        field = TextFieldValue(t, TextRange(pos))
+                        editor.setText(node, t)
+                    },
                     onDelete = {
                         val above = editor.delete(node)
                         if (above != null) startEdit(above) else stopEdit()
@@ -394,7 +407,7 @@ private fun TextButtonRow(label: String, onClick: () -> Unit) {
 @Composable
 private fun EditBar(
     onOutdent: () -> Unit, onIndent: () -> Unit, onUp: () -> Unit, onDown: () -> Unit,
-    onStatus: () -> Unit, onLineBreak: () -> Unit, onStrike: () -> Unit, onDelete: () -> Unit, onDone: () -> Unit,
+    onStatus: () -> Unit, onLineBreak: () -> Unit, onStrike: () -> Unit, onRule: () -> Unit, onDelete: () -> Unit, onDone: () -> Unit,
     picture: @Composable () -> Unit,
 ) {
     Surface(tonalElevation = 3.dp, modifier = Modifier.imePadding()) {
@@ -408,6 +421,7 @@ private fun EditBar(
             IconButton(onClick = onStatus) { Icon(Icons.Filled.CheckBox, "Next task status") }
             IconButton(onClick = onLineBreak) { Icon(Icons.Filled.KeyboardReturn, "New line in this block") }
             IconButton(onClick = onStrike, modifier = Modifier.testTag("edit-strike")) { Icon(Icons.Filled.FormatStrikethrough, "Strikethrough") }
+            IconButton(onClick = onRule, modifier = Modifier.testTag("edit-rule")) { Icon(Icons.Filled.HorizontalRule, "Horizontal line") }
             picture()
             IconButton(onClick = onDelete) { Icon(Icons.Filled.Delete, "Delete block") }
           }

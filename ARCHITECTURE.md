@@ -99,6 +99,7 @@ ignored.
   auto headings and numbered lists render from the same properties the web app
   stores (`background-color::`, `text-align::`, `heading::`,
   `logseq.order-list-type::`).
+- `---` / `***` / `___` alone on a line is `Part.Rule`, a horizontal line, as in the web app; the editing toolbar inserts one.
 - Press and hold any block for `BlockMenu`, a bottom sheet: colours,
   headings, alignment, strikethrough (`toggleLine`, the web editor's rule), tag (`TagDialog`), timestamp, copy ref / URL /
   Markdown / plain text, share, cut, numbered list, delete.
