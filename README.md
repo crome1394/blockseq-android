@@ -19,7 +19,7 @@ phone, straight from your own server.
 | **Pictures** | Shown as thumbnails; tap for full screen with zoom, share, save to the phone, remove or delete |
 | **Add pictures** | Take a photo or choose one from the phone, into the block you are editing |
 | **Thumb-friendly** | Action buttons along the bottom of the screen (a setting) |
-| **Left pane** | The ☰ menu: a calendar of journal days, sections, starred pages, workbooks, settings |
+| **Left pane** | The ☰ menu: sections, starred pages, workbooks, settings, and a calendar of journal days at the bottom |
 | **Edit** | Tap a block to edit; Enter splits it; indent, outdent, move, delete from a toolbar |
 | **Block menu** | Press and hold any block: colour, heading, alignment, strikethrough, tag, timestamp, copy, share, cut, numbered list, delete |
 | **Looks like the web** | Coloured tags, row highlights, headings, numbered lists |

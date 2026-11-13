@@ -189,7 +189,6 @@ private fun LeftPane(model: AppModel, current: Tab, onTab: (Tab) -> Unit, onOpen
             item {
                 Text("Blockseq", style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(start = 24.dp, top = 20.dp))
                 ConnectionStatus(model)
-                MonthCalendar(days) { onOpen(journalName(it)) }
             }
             items(Tab.entries.toList(), key = { "tab:" + it.name }) { t ->
                 NavigationDrawerItem(
@@ -217,6 +216,8 @@ private fun LeftPane(model: AppModel, current: Tab, onTab: (Tab) -> Unit, onOpen
             item {
                 HorizontalDivider(Modifier.padding(vertical = 8.dp))
                 NavigationDrawerItem(label = { Text("Settings") }, icon = { Icon(Icons.Filled.Settings, null) }, selected = false, onClick = onSettings, modifier = Modifier.padding(horizontal = 12.dp))
+                HorizontalDivider(Modifier.padding(vertical = 8.dp))
+                MonthCalendar(days) { onOpen(journalName(it)) }
             }
         }
     }
