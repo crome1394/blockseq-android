@@ -521,8 +521,15 @@ fun PageScreen(model: AppModel, name: String, onOpen: (String) -> Unit, quickNot
                                     }
                                 } else if (n.content.isBlank()) {
                                     Text(" ", style = MaterialTheme.typography.bodyLarge)
-                                } else {
+                                } else Column {
                                     BlockContent(n.content, model.statuses, api, onTap, { editor.cycleStatus(n) }, onRemoveImage = { src -> editor.removeImage(n, src) }, props = n.props.toMap(), depth = row.depth)
+                                    // As in the web app: children of a block tagged while locked are still plain text.
+                                    if (model.key == null && model.setup != null && editor.notSealedYet(n)) Text(
+                                        "⚠ Not encrypted yet: these blocks are still stored as plain text. Tap to unlock and encrypt them now.",
+                                        color = MaterialTheme.colorScheme.error,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        modifier = Modifier.padding(top = 2.dp).clickable { unlocking = true }.testTag("not-encrypted"),
+                                    )
                                 }
                             }
                         }

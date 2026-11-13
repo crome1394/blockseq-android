@@ -100,22 +100,14 @@ class PageEditor(
 
     fun isEncryptedRoot(n: Node) = ENCRYPTED_TAG.containsMatchIn(n.content) || n.encryptedBlob != null
 
-    /** Inside an #Encrypted block (the children it protects). */
-    fun insideEncrypted(n: Node): Boolean {
-        var p = n.parent
-        while (p != null) {
-            if (isEncryptedRoot(p)) return true
-            p = p.parent
-        }
-        return false
-    }
-
     suspend fun load() {
         try {
             val data = api.page(name)
             apply(data.blocks, data.page?.version ?: 0)
             backlinks = data
             error = null
+            // Tagged #Encrypted while locked (here or in the web app): encrypt those children now.
+            if (key != null && needsSealing()) { dirty = true; edits++; scheduleSave(0) }
             onSynced()
         } catch (e: Unpaired) {
             onUnpaired(e)
@@ -163,6 +155,15 @@ class PageEditor(
             }
         }
     }
+
+    /**
+     * #Encrypted blocks whose children are still plain text: tagged while
+     * locked, as the web app allows (it warns and encrypts them on unlock).
+     */
+    fun needsSealing(): Boolean = allNodes(root).any(::notSealedYet)
+
+    /** This block is tagged #Encrypted but its children are not encrypted yet. */
+    fun notSealedYet(n: Node): Boolean = ENCRYPTED_TAG.containsMatchIn(n.content) && n.encryptedBlob == null && n.children.isNotEmpty()
 
     /** Before saving: encrypt the children of every #Encrypted block, innermost first. */
     private fun sealSecrets() {
@@ -251,15 +252,6 @@ class PageEditor(
 
     /** A new empty block at the end of the page (saved once it has text). */
     fun addAtEnd(): Node = appendBlock()
-
-    fun addChild(parent: Node): Node {
-        val n = Node(newId(), "")
-        n.parent = parent
-        parent.children.add(0, n)
-        parent.collapsed = false
-        changed()
-        return n
-    }
 
     fun indent(n: Node) {
         val parent = n.parent ?: return
