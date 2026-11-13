@@ -90,6 +90,17 @@ ignored.
   `POST /api/assets` and its Markdown (with `{:size "quarter"}`, the web app's quarter size) goes at the cursor of the block being
   edited, or into a new block at the end.
 
+## Assets
+
+`ui/AssetsScreen.kt`, from the ☰ menu: `GET /api/assets` listed like the web
+app's Assets page (filter, *Only unused*, total; per file a thumbnail, size,
+date, path with copy, pages that use it). *Open* shows pictures in the viewer
+and hands other files to a phone app (`ACTION_VIEW` on a cached copy through
+the `FileProvider`); *Download* saves through MediaStore (pictures to
+`Pictures/Blockseq`, others to `Download/Blockseq`, no permission); *Delete*
+(`DELETE /api/assets`) confirms first and names the pages that would show a
+broken link.
+
 ## Reading and tagging
 
 - Code blocks wrap, have a copy button, and are coloured by `render/Highlight.kt` (in-house: keywords,

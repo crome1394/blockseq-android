@@ -71,13 +71,14 @@ class MainActivity : ComponentActivity() {
                         }
                         NavHost(nav, startDestination = "home") {
                             composable("home") {
-                                HomeScreen(model, open, onSettings = { nav.navigate("settings") }, onQuickNote = { name -> nav.navigate("page/" + Uri.encode(name) + "?note=true") })
+                                HomeScreen(model, open, onSettings = { nav.navigate("settings") }, onAssets = { nav.navigate("assets") }, onQuickNote = { name -> nav.navigate("page/" + Uri.encode(name) + "?note=true") })
                             }
                             composable("page/{name}?note={note}") { entry ->
                                 val name = Uri.decode(entry.arguments?.getString("name") ?: "")
                                 val note = entry.arguments?.getString("note") == "true"
                                 PageScreen(model, name, open, quickNote = note) { nav.popBackStack() }
                             }
+                            composable("assets") { app.blockseq.android.ui.AssetsScreen(model, open) { nav.popBackStack() } }
                             // A card over the screen it was opened from.
                             dialog("settings", dialogProperties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
                                 SettingsScreen(model) { nav.popBackStack() }

@@ -54,6 +54,10 @@ data class SearchResults(val pages: List<String> = emptyList(), val blocks: List
 @Serializable
 data class TaskHit(val id: String, val content: String, @SerialName("page_name") val pageName: String, @SerialName("journal_day") val journalDay: Long? = null)
 
+/** An uploaded file, as the web app's Assets page lists it; [modified] in ms, [pages] that mention it. */
+@Serializable
+data class AssetInfo(val name: String, val path: String, val size: Long = 0, val modified: Long = 0, val kind: String = "other", val pages: List<String> = emptyList(), val absolute: String? = null)
+
 @Serializable
 data class Workbook(val id: String, val name: String)
 
@@ -145,6 +149,7 @@ class Api(private val base: String, private val token: String?, val workbook: St
     suspend fun tasks(): List<TaskHit> = get(url("/api/tasks"))
     suspend fun statuses(): List<Status> = get<ConfigBody>(url("/api/config", global = true)).statuses
     suspend fun encryption(): EncryptionSetup? = get<EncryptionBody>(url("/api/encryption", global = true)).encryption
+    suspend fun assets(): List<AssetInfo> = get(url("/api/assets"))
     suspend fun workbooks(): List<Workbook> = get(url("/api/workbooks", global = true))
 
     suspend fun savePage(name: String, baseVersion: Long, blocks: List<Block>, overwrite: Boolean = false): SaveResult {

@@ -1,6 +1,7 @@
 package app.blockseq.android.ui
 
 import androidx.compose.foundation.clickable
+import androidx.compose.material.icons.filled.Folder
 import androidx.compose.foundation.background
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.foundation.layout.Arrangement
@@ -105,7 +106,7 @@ private enum class Tab(val label: String, val icon: androidx.compose.ui.graphics
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HomeScreen(model: AppModel, onOpen: (String) -> Unit, onSettings: () -> Unit, onQuickNote: (String) -> Unit) {
+fun HomeScreen(model: AppModel, onOpen: (String) -> Unit, onSettings: () -> Unit, onAssets: () -> Unit = {}, onQuickNote: (String) -> Unit) {
     var tab by rememberSaveable { mutableStateOf(Tab.Journals) }
     // Bumped by live updates from other devices, so lists reload.
     var changes by remember { mutableIntStateOf(0) }
@@ -143,7 +144,7 @@ fun HomeScreen(model: AppModel, onOpen: (String) -> Unit, onSettings: () -> Unit
     ModalNavigationDrawer(
         drawerState = drawer,
         drawerContent = {
-            LeftPane(model, tab, onTab = { tab = it; scope.launch { drawer.close() } }, onOpen = { scope.launch { drawer.close() }; onOpen(it) }, onSettings = { scope.launch { drawer.close() }; onSettings() }, open = drawer.isOpen)
+            LeftPane(model, tab, onTab = { tab = it; scope.launch { drawer.close() } }, onOpen = { scope.launch { drawer.close() }; onOpen(it) }, onSettings = { scope.launch { drawer.close() }; onSettings() }, onAssets = { scope.launch { drawer.close() }; onAssets() }, open = drawer.isOpen)
         },
     ) {
     Scaffold(
@@ -220,7 +221,7 @@ fun HomeScreen(model: AppModel, onOpen: (String) -> Unit, onSettings: () -> Unit
 
 /** The left pane: sections, starred pages, workbooks, settings. */
 @Composable
-private fun LeftPane(model: AppModel, current: Tab, onTab: (Tab) -> Unit, onOpen: (String) -> Unit, onSettings: () -> Unit, open: Boolean) {
+private fun LeftPane(model: AppModel, current: Tab, onTab: (Tab) -> Unit, onOpen: (String) -> Unit, onSettings: () -> Unit, onAssets: () -> Unit, open: Boolean) {
     var favorites by remember { mutableStateOf<List<String>>(emptyList()) }
     var workbooks by remember { mutableStateOf<List<app.blockseq.android.data.Workbook>>(emptyList()) }
     var days by remember { mutableStateOf<Set<Long>>(emptySet()) }
@@ -236,7 +237,7 @@ private fun LeftPane(model: AppModel, current: Tab, onTab: (Tab) -> Unit, onOpen
         ConnectionStatus(model)
         // The sections, favorites and workbooks share the height above Settings: each row
         // grows to fill it. With too many to fit at a comfortable size, the list scrolls.
-        val rows = Tab.entries.size + maxOf(favorites.size, 1) + (if (workbooks.size > 1) workbooks.size else 0)
+        val rows = Tab.entries.size + 1 + maxOf(favorites.size, 1) + (if (workbooks.size > 1) workbooks.size else 0)
         val headings = if (workbooks.size > 1) 2 else 1
         androidx.compose.foundation.layout.BoxWithConstraints(Modifier.weight(1f).fillMaxWidth()) {
             val fits = maxHeight >= 48.dp * rows + 40.dp * headings
@@ -252,6 +253,13 @@ private fun LeftPane(model: AppModel, current: Tab, onTab: (Tab) -> Unit, onOpen
                             modifier = m.padding(horizontal = 12.dp, vertical = 2.dp).fillMaxWidth().testTag("pane-${t.name.lowercase()}"),
                         )
                     }
+                }
+                // The workbook's uploaded files (the web app's Assets page).
+                item { m ->
+                    NavigationDrawerItem(
+                        label = { Text("Assets") }, icon = { Icon(Icons.Filled.Folder, null) }, selected = false, onClick = onAssets,
+                        modifier = m.padding(horizontal = 12.dp, vertical = 2.dp).fillMaxWidth().testTag("pane-assets"),
+                    )
                 }
                 PaneHeading("Favorites")
                 if (favorites.isEmpty()) item { m ->
