@@ -24,7 +24,7 @@ phone, straight from your own server.
 | **Page ⋯ menu** | New row (tap, or drag to a place), take a photo, choose a picture, lock or unlock |
 | **Pictures** | Thumbnails; full screen with zoom, share, save, remove or delete; stays open when the phone turns |
 | **Assets** | Every uploaded file, as in the web app: where it is used, filter, only unused, open, download, delete |
-| **Left pane** | Sections, Assets, favorites, workbooks, Settings and a month calendar (first day of the week is a setting) |
+| **Left pane** | Sections, Assets, favorites, workbooks, a Tailscale key, Settings and a month calendar (first day of the week is a setting) |
 | **Quick capture** | A pencil on Journals for a quick note; a + on Tasks with status and due date; a filter card on Pages |
 | **Tasks** | Every open task in one list; tap a badge to step its status |
 | **Search** | Full-text search, with the field at the top or bottom |
@@ -51,7 +51,7 @@ All screenshots use the made-up notes from `tools/demo-server.sh`.
 2. Build and install the app (see [Building](#building)), or install a release APK.
 3. Open it, enter your server address and password, and tap **Pair**.
 
-The phone must reach the server, e.g. on your network or over a VPN such as Tailscale. With Tailscale installed and logged in, the app connects it by itself when the server is out of reach ([how](ARCHITECTURE.md#tailscale)). Only the Scratchpad widget works offline.
+The phone must reach the server, e.g. on your network or over a VPN such as Tailscale. With Tailscale installed and logged in, the app connects it by itself when the server is out of reach and disconnects it when you leave the app or get home ([how](ARCHITECTURE.md#tailscale)). Only the Scratchpad widget works offline.
 
 ## Building
 

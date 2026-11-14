@@ -214,8 +214,10 @@ The key in the left pane (`TailscaleItem`, hidden with Settings → General →
 hand (`AutoTailscale.toggle`). What it does is the user's: a connection made
 with it is left alone like one made in Tailscale, and after turning Tailscale
 off with it the app doesn't turn it back on until the app is opened again or
-the phone joins a Wi-Fi network. The widget's background sync doesn't connect Tailscale;
-its queued notes go out the next time the app opens.
+the phone joins a Wi-Fi network.
+
+The widget's background sync doesn't connect Tailscale; its queued notes go
+out the next time the app opens.
 
 ## Privacy
 
