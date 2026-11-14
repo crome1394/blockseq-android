@@ -37,10 +37,17 @@ class MainActivity : ComponentActivity() {
         openPage = intent.getStringExtra(OPEN_PAGE)
     }
 
-    override fun onResume() {
-        super.onResume()
-        // Android can hold a widget retry back for minutes; opening the app sends waiting notes now.
-        if (app.blockseq.android.scratch.ScratchpadStore.load(this).pending.isNotEmpty()) app.blockseq.android.scratch.ScratchpadSync.request(this)
+    override fun onStart() {
+        super.onStart()
+        // Connects Tailscale if the server is out of reach, then sends notes the widget
+        // queued (Android can hold a widget retry back for minutes).
+        model.onForeground()
+    }
+
+    override fun onStop() {
+        super.onStop()
+        // Disconnects an auto-connected Tailscale a little later unless the app comes back.
+        if (!isChangingConfigurations) model.onBackground()
     }
 
     companion object {

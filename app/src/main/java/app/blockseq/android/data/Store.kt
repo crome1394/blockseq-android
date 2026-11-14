@@ -57,6 +57,11 @@ class Store(context: Context) {
         get() = prefs.getInt("week_start", 7)
         set(v) = prefs.edit().putInt("week_start", v).apply()
 
+    /** Connect Tailscale while the app is open and the server is out of reach (mobile data, other Wi-Fi). */
+    var autoTailscale: Boolean
+        get() = prefs.getBoolean("auto_tailscale", true)
+        set(v) = prefs.edit().putBoolean("auto_tailscale", v).apply()
+
     /** Paired: a server address, and a token unless the server needs none. */
     val paired: Boolean get() = server.isNotEmpty() && prefs.getBoolean("paired", false)
 

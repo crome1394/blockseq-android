@@ -145,6 +145,7 @@ fun PageScreen(model: AppModel, name: String, onOpen: (String) -> Unit, quickNot
         // Reconnects after a dropped stream (as the home screen does), then reloads for what it missed.
         var reconnect = false
         while (true) {
+            model.reachServer()
             api.events().catch { }.collect { ev ->
                 val type = ev["type"]?.jsonPrimitive?.content
                 val page = ev["name"]?.jsonPrimitive?.content

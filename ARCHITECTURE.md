@@ -14,6 +14,8 @@ Nothing is cached on the phone between launches except the pairing.
 | `AppModel.kt` | App-wide state: the API client, task statuses, the encryption key while unlocked |
 | `data/Api.kt` | The HTTP API (OkHttp), live updates (server-sent events), device pairing |
 | `data/Store.kt` | Server address, workbook, and the device token (encrypted with an Android Keystore key) |
+| `net/AutoTailscale.kt` | Connects Tailscale while the app is open and the server is out of reach ([below](#tailscale)) |
+| `net/ServerProbe.kt`, `net/Tailscale.kt` | The direct-reach check (`/api/health`), and Tailscale's connect/disconnect intents |
 | `outline/Outline.kt` | The block tree, its flat API form, managed properties, the outline text format |
 | `outline/Tasks.kt` | Task statuses (`TODO`, `DONE`, …), matching the web app |
 | `crypto/BlockCrypto.kt` | `#Encrypted` blocks: PBKDF2 + AES-256-GCM, byte-compatible with the web app |
@@ -179,10 +181,35 @@ repo:
 `tools/decrypt-check.ts` opens what the phone wrote with WebCrypto, the
 browser's own implementation, as an end-to-end check.
 
+## Tailscale
+
+With Settings → General → **Connect Tailscale when needed** on (default) and
+Tailscale installed, `AutoTailscale.ensure()` runs when the app comes to the
+front and before each live-stream (re)connect, so leaving home Wi-Fi mid-use
+is caught too. When no VPN is up it decides:
+
+| Network | Connects Tailscale when |
+|---|---|
+| Mobile data | Always |
+| Wi-Fi, Ethernet, other | `GET /api/health` (no login, redirects not followed) on that network doesn't answer 200 or 503 within about 3 s |
+
+So home Wi-Fi stays direct, while another Wi-Fi, a proxy refusing outside
+addresses, or a captive portal uses Tailscale. Connecting sends Tailscale's
+`CONNECT_VPN` intent (the one Tasker uses), waits up to 15 s for the VPN,
+then reloads the open views and sends any notes the widget queued.
+
+The live stream keeps the connection busy while the app is open, so it stays
+up until the app leaves the screen. Then a system alarm sends
+`DISCONNECT_VPN` straight to Tailscale 30 s later, even if Android froze or
+killed the app; coming back first cancels it. Only a connection the app made
+is ever disconnected. The widget's background sync doesn't connect Tailscale;
+its queued notes go out the next time the app opens.
+
 ## Privacy
 
 No analytics, no crash reporting, no third-party services. The app talks
-only to the server you paired with. HTTPS is required; plain HTTP is allowed
+only to the server you paired with (and, when set to, tells the Tailscale app
+on the phone to connect or disconnect). HTTPS is required; plain HTTP is allowed
 only to `localhost`, for testing through `adb reverse`.
 
 ## Not done yet

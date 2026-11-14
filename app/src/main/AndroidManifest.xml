@@ -8,6 +8,8 @@
     <uses-feature android:name="android.hardware.camera" android:required="false" />
 
     <queries>
+        <!-- Tailscale: connect it when the server is out of reach. -->
+        <package android:name="com.tailscale.ipn" />
         <intent>
             <action android:name="android.media.action.IMAGE_CAPTURE" />
         </intent>

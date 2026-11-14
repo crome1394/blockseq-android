@@ -114,6 +114,8 @@ fun HomeScreen(model: AppModel, onOpen: (String) -> Unit, onSettings: () -> Unit
     // Live updates; reconnects after a dropped connection. The left pane shows the state.
     LaunchedEffect(api) {
         while (true) {
+            // The network may have changed (left home Wi-Fi): Tailscale if the server is out of reach.
+            model.reachServer()
             api.events().catch { model.connected = false }.collect { ev ->
                 val type = ev["type"]?.toString()?.trim('"')
                 if (type == "_open") { model.connected = true; model.markSynced(); return@collect }
@@ -683,7 +685,7 @@ private fun ConnectionStatus(model: AppModel) {
         androidx.compose.foundation.layout.Box(Modifier.size(10.dp).background(color, androidx.compose.foundation.shape.CircleShape))
         Spacer(Modifier.width(8.dp))
         val synced = model.lastSync?.let { "synced ${ago(it)}" } ?: "not synced yet"
-        Text((if (model.connected) "Connected" else "Offline") + " · " + synced, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text((if (model.connected) "Connected" else if (model.tailscale.connecting) "Connecting Tailscale…" else "Offline") + " · " + synced, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 

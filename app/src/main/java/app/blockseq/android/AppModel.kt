@@ -11,6 +11,9 @@ import app.blockseq.android.crypto.EncryptionSetup
 import app.blockseq.android.data.Api
 import app.blockseq.android.data.Store
 import app.blockseq.android.data.Unpaired
+import app.blockseq.android.net.AutoTailscale
+import app.blockseq.android.scratch.ScratchpadStore
+import app.blockseq.android.scratch.ScratchpadSync
 import app.blockseq.android.outline.Statuses
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -22,6 +25,44 @@ import kotlinx.coroutines.withContext
  */
 class AppModel(app: Application) : AndroidViewModel(app) {
     val store = Store(app)
+
+    /** Tailscale when the server is out of reach. */
+    val tailscale = AutoTailscale(app, store)
+
+    /** Settings → Connect Tailscale when needed (kept in Store; here so Settings redraws). */
+    var autoTailscale by mutableStateOf(store.autoTailscale)
+        private set
+
+    fun changeAutoTailscale(on: Boolean) {
+        store.autoTailscale = on
+        autoTailscale = on
+        if (on) viewModelScope.launch { reachServer(reload = true) } else tailscale.disconnectOurs()
+    }
+
+    /**
+     * Connects Tailscale if the server is out of reach. With [reload], views
+     * reload when it did (what they loaded before it came up failed).
+     */
+    suspend fun reachServer(reload: Boolean = false) {
+        val before = tailscale.connects
+        val up = tailscale.ensure()
+        if (reload && (up || tailscale.connects != before) && api != null) {
+            generation++
+            refreshSettings()
+        }
+    }
+
+    /** The app came to the front: reach the server, then send notes the widget queued. */
+    fun onForeground() {
+        tailscale.onForeground()
+        viewModelScope.launch {
+            reachServer(reload = true)
+            val ctx = getApplication<Application>()
+            if (ScratchpadStore.load(ctx).pending.isNotEmpty()) ScratchpadSync.request(ctx)
+        }
+    }
+
+    fun onBackground() = tailscale.onBackground()
 
     var api by mutableStateOf<Api?>(null)
         private set

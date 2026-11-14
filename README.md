@@ -31,6 +31,7 @@ phone, straight from your own server.
 | **Encrypted blocks** | `#Encrypted` blocks unlock with your password and decrypt on the phone, byte-compatible with the web app |
 | **Safe saves** | The server's version check; a conflict offers *Keep mine*, *Use theirs*, or *See the differences* (changed words marked) |
 | **Live** | Pages reload when another device saves them |
+| **Tailscale when needed** | Away from home (mobile data or another Wi-Fi), connects Tailscale while the app is open, and disconnects after |
 | **Paired, not logged in** | The password is used once; the phone gets its own token, revocable on the server |
 | **Scratchpad widget** | Your Scratchpad page on the home screen, grouped by day, with a + to add notes; works offline |
 
@@ -50,7 +51,7 @@ All screenshots use the made-up notes from `tools/demo-server.sh`.
 2. Build and install the app (see [Building](#building)), or install a release APK.
 3. Open it, enter your server address and password, and tap **Pair**.
 
-The phone must reach the server, e.g. on your network or over a VPN such as Tailscale. Only the Scratchpad widget works offline.
+The phone must reach the server, e.g. on your network or over a VPN such as Tailscale. With Tailscale installed and logged in, the app connects it by itself when the server is out of reach ([how](ARCHITECTURE.md#tailscale)). Only the Scratchpad widget works offline.
 
 ## Building
 

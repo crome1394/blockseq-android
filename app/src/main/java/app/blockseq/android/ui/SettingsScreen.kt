@@ -95,6 +95,15 @@ fun SettingsScreen(model: AppModel, onBack: () -> Unit) {
                             Text(model.store.server, style = MaterialTheme.typography.bodyLarge)
                             Text("Paired as “${model.store.deviceName}”. Revoke this phone any time in the web app: Settings → Security.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             HorizontalDivider()
+                            Section("Tailscale")
+                            Row(Modifier.fillMaxWidth().clickable { model.changeAutoTailscale(!model.autoTailscale) }.testTag("auto-tailscale"), verticalAlignment = Alignment.CenterVertically) {
+                                Column(Modifier.weight(1f)) {
+                                    Text("Connect Tailscale when needed")
+                                    Text("On mobile data, or on Wi-Fi where the server can't be reached directly (away from home), connect Tailscale while the app is open and disconnect 30 seconds after you leave it. A connection you made yourself is left alone. Tailscale must be installed and logged in.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
+                                Switch(checked = model.autoTailscale, onCheckedChange = { model.changeAutoTailscale(it) })
+                            }
+                            HorizontalDivider()
                             Section("Workbook")
                             workbooks.forEach { w ->
                                 Row(Modifier.fillMaxWidth().clickable { model.switchWorkbook(w.id) }, verticalAlignment = Alignment.CenterVertically) {
