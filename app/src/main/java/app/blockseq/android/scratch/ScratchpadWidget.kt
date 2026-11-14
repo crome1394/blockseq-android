@@ -46,7 +46,11 @@ import androidx.glance.text.TextStyle
 import androidx.glance.unit.ColorProvider
 import app.blockseq.android.MainActivity
 import app.blockseq.android.R
+import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.graphics.toArgb
 import app.blockseq.android.render.Part
+import app.blockseq.android.render.TAG_REGEX
+import app.blockseq.android.render.tagColors
 import app.blockseq.android.render.parts
 import app.blockseq.android.render.shownText
 import java.io.File
@@ -158,7 +162,7 @@ class ScratchpadWidget : GlanceAppWidget() {
                         when (line) {
                             is Line.Day -> Text(line.day, style = TextStyle(color = fg, fontSize = 12.sp, fontWeight = FontWeight.Bold), modifier = GlanceModifier.padding(top = 8.dp, bottom = 2.dp))
                             is Line.Note -> Row(GlanceModifier.fillMaxWidth().padding(start = (line.depth * 14).dp, top = 3.dp, bottom = 3.dp).clickable(open)) {
-                                RowContent(line.content, line.waiting, images, fg, dim)
+                                RowContent(context, line.content, line.waiting, images, text, fg, dim)
                             }
                         }
                     }
@@ -169,7 +173,7 @@ class ScratchpadWidget : GlanceAppWidget() {
     }
 
     @Composable
-    private fun RowContent(content: String, waiting: Boolean, images: File, fg: ColorProvider, dim: ColorProvider) {
+    private fun RowContent(context: Context, content: String, waiting: Boolean, images: File, text: Color, fg: ColorProvider, dim: ColorProvider) {
         val (_, time, body) = splitStamp(shownText(content))
         Column(GlanceModifier.fillMaxWidth()) {
             if (time != null || waiting) Text(listOfNotNull(time, if (waiting) "⏳ not sent yet" else null).joinToString(" · "), style = TextStyle(color = dim, fontSize = 11.sp))
@@ -183,9 +187,9 @@ class ScratchpadWidget : GlanceAppWidget() {
                     }
                     is Part.Rule -> androidx.glance.layout.Box(GlanceModifier.fillMaxWidth().height(1.dp).background(dim)) {}
                     is Part.Code -> Text(part.code, style = TextStyle(color = fg, fontSize = 12.sp), maxLines = 8)
-                    is Part.Text -> if (part.text.isNotBlank()) Text(plain(part.text), style = TextStyle(color = fg, fontSize = if (part.heading in 1..3) 16.sp else 14.sp))
+                    is Part.Text -> if (part.text.isNotBlank()) RichText(context, part.text, text, if (part.heading in 1..3) 16f else 14f, fg)
                     is Part.Table -> Text(part.rows.joinToString("\n") { it.joinToString("  ·  ") }, style = TextStyle(color = fg, fontSize = 12.sp))
-                    is Part.Admonition -> Text(plain(part.text), style = TextStyle(color = fg, fontSize = 13.sp))
+                    is Part.Admonition -> RichText(context, part.text, text, 13f, fg)
                     is Part.Maths -> Text(part.tex, style = TextStyle(color = dim, fontSize = 12.sp))
                 }
             }
@@ -193,7 +197,45 @@ class ScratchpadWidget : GlanceAppWidget() {
         }
     }
 
+    /**
+     * Block text with its #tags coloured as in the app (same colour per tag
+     * name). Text without tags stays a plain Glance Text.
+     */
+    @Composable
+    private fun RichText(context: Context, markdown: String, text: Color, sizeSp: Float, fg: ColorProvider) {
+        if (!TAG_REGEX.containsMatchIn(markdown)) {
+            Text(plain(markdown), style = TextStyle(color = fg, fontSize = sizeSp.sp))
+            return
+        }
+        // Light text means a dark widget background: use the dark-theme tag colours.
+        val dark = text.luminance() > 0.5f
+        val rv = android.widget.RemoteViews(context.packageName, R.layout.widget_rich_text)
+        rv.setTextViewText(R.id.rich_text, tagged(markdown, dark))
+        rv.setTextColor(R.id.rich_text, text.toArgb())
+        rv.setTextViewTextSize(R.id.rich_text, android.util.TypedValue.COMPLEX_UNIT_SP, sizeSp)
+        androidx.glance.appwidget.AndroidRemoteViews(rv, GlanceModifier.fillMaxWidth())
+    }
+
     companion object {
+        /** [plain] text, with each #tag in its colour on its tinted background. */
+        fun tagged(markdown: String, dark: Boolean): CharSequence {
+            val out = android.text.SpannableStringBuilder()
+            var at = 0
+            for (m in TAG_REGEX.findAll(markdown)) {
+                out.append(plain(markdown.substring(at, m.range.first)))
+                val name = m.groupValues[1].ifEmpty { m.groupValues[2] }
+                val (tagFg, tagBg) = tagColors(name, dark)
+                val start = out.length
+                // Thin spaces pad the tinted background, like the app's tag chips.
+                out.append("\u2009#").append(name).append("\u2009")
+                out.setSpan(android.text.style.ForegroundColorSpan(tagFg.toArgb()), start, out.length, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                out.setSpan(android.text.style.BackgroundColorSpan(tagBg.toArgb()), start, out.length, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                at = m.range.last + 1
+            }
+            out.append(plain(markdown.substring(at)))
+            return out
+        }
+
         /** Redraws every Scratchpad widget with the phone's current copy. */
         suspend fun refresh(context: Context) {
             val manager = androidx.glance.appwidget.GlanceAppWidgetManager(context)

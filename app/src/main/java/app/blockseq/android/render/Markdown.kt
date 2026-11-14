@@ -53,6 +53,9 @@ private data class Rule(val regex: Regex, val apply: AnnotatedString.Builder.(Ma
 
 private val TAG_CHARS = """[^\s#,.!?;:()\[\]"'`]+"""
 
+/** A #tag or #[[tag with spaces]] in block text: group 1 or 2 is the name (as the inline rules match them). */
+val TAG_REGEX = Regex("""(?<=^|\s)#\[\[([^\]]+)\]\]|(?<=^|\s)#($TAG_CHARS)""")
+
 /**
  * Inline Markdown as the web app writes it: `code`, [[page]], #tag,
  * #[[tag]], [text](url), ((block ref)), **bold**, *italic*, ~~strike~~,
