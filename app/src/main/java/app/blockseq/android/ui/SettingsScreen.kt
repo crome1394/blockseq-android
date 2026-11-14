@@ -99,7 +99,7 @@ fun SettingsScreen(model: AppModel, onBack: () -> Unit) {
                             Row(Modifier.fillMaxWidth().clickable { model.changeAutoTailscale(!model.autoTailscale) }.testTag("auto-tailscale"), verticalAlignment = Alignment.CenterVertically) {
                                 Column(Modifier.weight(1f)) {
                                     Text("Connect Tailscale when needed")
-                                    Text("On mobile data, or on Wi-Fi where the server can't be reached directly (away from home), connect Tailscale while the app is open and disconnect 30 seconds after you leave it. A connection you made yourself is left alone. Tailscale must be installed and logged in.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    Text("On mobile data, or on Wi-Fi where the server can't be reached directly (away from home), connect Tailscale while the app is open. It disconnects 30 seconds after you leave the app, or when the phone joins Wi-Fi that reaches the server directly (home). A connection you made yourself is left alone. Tailscale must be installed and logged in.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 }
                                 Switch(checked = model.autoTailscale, onCheckedChange = { model.changeAutoTailscale(it) })
                             }

@@ -43,9 +43,9 @@ class AppModel(app: Application) : AndroidViewModel(app) {
      * Connects Tailscale if the server is out of reach. With [reload], views
      * reload when it did (what they loaded before it came up failed).
      */
-    suspend fun reachServer(reload: Boolean = false) {
+    suspend fun reachServer(reload: Boolean = false, on: android.net.Network? = null) {
         val before = tailscale.connects
-        val up = tailscale.ensure()
+        val up = tailscale.ensure(on)
         if (reload && (up || tailscale.connects != before) && api != null) {
             generation++
             refreshSettings()
@@ -54,7 +54,11 @@ class AppModel(app: Application) : AndroidViewModel(app) {
 
     /** The app came to the front: reach the server, then send notes the widget queued. */
     fun onForeground() {
-        tailscale.onForeground()
+        tailscale.onForeground { network ->
+            // The phone joined a Wi-Fi network: drop our Tailscale and ask again whether
+            // it is needed here (not at home; reconnects on any other Wi-Fi).
+            viewModelScope.launch { if (tailscale.networkJoined(network)) reachServer(reload = true, on = network) }
+        }
         viewModelScope.launch {
             reachServer(reload = true)
             val ctx = getApplication<Application>()

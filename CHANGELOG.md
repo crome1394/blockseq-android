@@ -9,6 +9,7 @@ The first version. Needs a Blockseq server with device pairing.
 
 ### Added
 
+- Tailscale that the app connected now also disconnects when the phone joins Wi-Fi that reaches the server directly (home) while the app is open; before, it only disconnected after you left the app. It is dropped when a Wi-Fi network is joined and reconnects by itself if that network turns out not to reach the server.
 - Scratchpad widget: `#tags` are coloured as in the app and the web app (each tag its own colour, on a tinted background).
 - Tailscale connects by itself when the server is out of reach: on mobile data, or on Wi-Fi where `/api/health` doesn't answer directly (away from home). It stays up while the app is open and disconnects 30 seconds after you leave; a connection you made yourself is left alone. Settings → General → Tailscale.
 - Fixed: an open page stopped following other devices' changes after the connection dropped once; it now reconnects and catches up.

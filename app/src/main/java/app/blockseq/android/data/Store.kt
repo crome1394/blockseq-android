@@ -62,6 +62,11 @@ class Store(context: Context) {
         get() = prefs.getBoolean("auto_tailscale", true)
         set(v) = prefs.edit().putBoolean("auto_tailscale", v).apply()
 
+    /** The Tailscale connection now up was made by the app (kept across an app restart, so it is still cleaned up). */
+    var tailscaleOurs: Boolean
+        get() = prefs.getBoolean("tailscale_ours", false)
+        set(v) = prefs.edit().putBoolean("tailscale_ours", v).apply()
+
     /** Paired: a server address, and a token unless the server needs none. */
     val paired: Boolean get() = server.isNotEmpty() && prefs.getBoolean("paired", false)
 

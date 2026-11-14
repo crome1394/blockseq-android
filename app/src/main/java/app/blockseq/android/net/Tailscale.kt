@@ -64,6 +64,37 @@ object Tailscale {
         return caps.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR)
     }
 
+    /** True when [network] is mobile data (not Wi-Fi or Ethernet). */
+    fun isMobileData(context: Context, network: Network): Boolean {
+        val cm = context.getSystemService(ConnectivityManager::class.java) ?: return false
+        val caps = cm.getNetworkCapabilities(network) ?: return false
+        return caps.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) &&
+            !caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) &&
+            !caps.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET)
+    }
+
+    /**
+     * Calls [onJoined] for each Wi-Fi or Ethernet network that has working
+     * internet, now and as the phone joins one (also while a VPN is up).
+     * Returns the callback to pass to [unwatch].
+     */
+    fun watchWifi(context: Context, onJoined: (Network) -> Unit): ConnectivityManager.NetworkCallback? {
+        val cm = context.getSystemService(ConnectivityManager::class.java) ?: return null
+        val request = NetworkRequest.Builder()
+            .addTransportType(NetworkCapabilities.TRANSPORT_WIFI)
+            .addTransportType(NetworkCapabilities.TRANSPORT_ETHERNET)
+            .addCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
+            .build()
+        val callback = object : ConnectivityManager.NetworkCallback() {
+            override fun onAvailable(network: Network) = onJoined(network)
+        }
+        return runCatching { cm.registerNetworkCallback(request, callback); callback }.getOrNull()
+    }
+
+    fun unwatch(context: Context, callback: ConnectivityManager.NetworkCallback) {
+        runCatching { context.getSystemService(ConnectivityManager::class.java)?.unregisterNetworkCallback(callback) }
+    }
+
     /** Emits [isVpnActive] now and whenever a VPN network comes or goes. */
     fun vpnActiveFlow(context: Context): Flow<Boolean> = callbackFlow {
         val cm = context.getSystemService(ConnectivityManager::class.java)

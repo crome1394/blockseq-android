@@ -198,11 +198,16 @@ addresses, or a captive portal uses Tailscale. Connecting sends Tailscale's
 `CONNECT_VPN` intent (the one Tasker uses), waits up to 15 s for the VPN,
 then reloads the open views and sends any notes the widget queued.
 
-The live stream keeps the connection busy while the app is open, so it stays
-up until the app leaves the screen. Then a system alarm sends
-`DISCONNECT_VPN` straight to Tailscale 30 s later, even if Android froze or
-killed the app; coming back first cancels it. Only a connection the app made
-is ever disconnected. The widget's background sync doesn't connect Tailscale;
+The live stream keeps the connection busy while the app is open. A connection
+the app made (remembered in `Store`, so an app restart doesn't orphan it) is
+dropped in two cases:
+
+| When | How |
+|---|---|
+| The phone joins a Wi-Fi or Ethernet network with working internet while the app is open (`Tailscale.watchWifi` → `networkJoined`) | Tailscale is disconnected and `ensure()` asks again on that network: at home `/api/health` answers and it stays off; on any other Wi-Fi it reconnects. With the VPN up there is no reliable way to ask "would the server answer without it?", and reading the Wi-Fi's name needs the location permission, so it is dropped first and asked then. A network it already decided on is not asked again |
+| The app leaves the screen | A system alarm sends `DISCONNECT_VPN` straight to Tailscale 30 s later, even if Android froze or killed the app; coming back first cancels it |
+
+Only a connection the app made is ever disconnected. The widget's background sync doesn't connect Tailscale;
 its queued notes go out the next time the app opens.
 
 ## Privacy
