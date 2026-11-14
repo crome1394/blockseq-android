@@ -96,6 +96,13 @@ fun SettingsScreen(model: AppModel, onBack: () -> Unit) {
                             Text("Paired as “${model.store.deviceName}”. Revoke this phone any time in the web app: Settings → Security.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             HorizontalDivider()
                             Section("Tailscale")
+                            Row(Modifier.fillMaxWidth().clickable { model.changeShowTailscaleButton(!model.showTailscaleButton) }.testTag("tailscale-button"), verticalAlignment = Alignment.CenterVertically) {
+                                Column(Modifier.weight(1f)) {
+                                    Text("Show Tailscale button")
+                                    Text("A key in the ☰ menu: tap to connect or disconnect Tailscale yourself.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
+                                Switch(checked = model.showTailscaleButton, onCheckedChange = { model.changeShowTailscaleButton(it) })
+                            }
                             Row(Modifier.fillMaxWidth().clickable { model.changeAutoTailscale(!model.autoTailscale) }.testTag("auto-tailscale"), verticalAlignment = Alignment.CenterVertically) {
                                 Column(Modifier.weight(1f)) {
                                     Text("Connect Tailscale when needed")

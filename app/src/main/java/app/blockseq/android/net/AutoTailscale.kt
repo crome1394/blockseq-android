@@ -36,7 +36,8 @@ import kotlinx.coroutines.withTimeoutOrNull
  *   alarm that sends DISCONNECT_VPN straight to Tailscale, so it fires even
  *   if Android has frozen or killed this process. Coming back first cancels it.
  *
- * A connection the user made is never touched.
+ * A connection the user made (in Tailscale, or with the key in the left pane,
+ * [toggle]) is never touched.
  */
 class AutoTailscale(context: Context, private val store: Store) {
     private val appContext = context.applicationContext
@@ -50,6 +51,9 @@ class AutoTailscale(context: Context, private val store: Store) {
 
     /** The network we were on when we last connected: joining it again is not news. */
     private var decidedOn: Network? = null
+
+    /** The user turned Tailscale off with the key: don't turn it straight back on. */
+    private var heldOff = false
 
     private var wifiWatch: ConnectivityManager.NetworkCallback? = null
 
@@ -70,7 +74,7 @@ class AutoTailscale(context: Context, private val store: Store) {
         if (Tailscale.isVpnActive(appContext)) return false
         // Our connection went away (the alarm, or the user turned it off): no longer ours.
         ours = false
-        if (!store.autoTailscale || store.server.isBlank()) return false
+        if (heldOff || !store.autoTailscale || store.server.isBlank()) return false
         if (!Tailscale.isInstalled(appContext)) return false
         val network = on ?: Tailscale.activeNetwork(appContext) ?: return false
         if (!Tailscale.isMobileData(appContext, network) && ServerProbe.reachable(network, store.server)) return false
@@ -95,6 +99,7 @@ class AutoTailscale(context: Context, private val store: Store) {
      * (home). True when it dropped it.
      */
     suspend fun networkJoined(network: Network): Boolean = lock.withLock {
+        heldOff = false
         if (!ours || network == decidedOn || !Tailscale.isVpnActive(appContext)) return false
         Tailscale.setConnected(appContext, connect = false)
         ours = false
@@ -102,9 +107,19 @@ class AutoTailscale(context: Context, private val store: Store) {
         true
     }
 
+    /** The key in the left pane: connect or disconnect by hand. Either way the result is the user's, not ours. */
+    fun toggle() {
+        val on = Tailscale.isVpnActive(appContext)
+        heldOff = on
+        ours = false
+        alarms?.cancel(Tailscale.disconnectPendingIntent(appContext))
+        Tailscale.setConnected(appContext, connect = !on)
+    }
+
     /** The app came to the front: keep the connection, and watch for Wi-Fi networks. [onWifi] runs on a system thread. */
     fun onForeground(onWifi: (Network) -> Unit) {
         alarms?.cancel(Tailscale.disconnectPendingIntent(appContext))
+        heldOff = false
         if (wifiWatch == null) wifiWatch = Tailscale.watchWifi(appContext, onWifi)
     }
 

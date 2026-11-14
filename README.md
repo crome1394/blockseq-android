@@ -31,7 +31,7 @@ phone, straight from your own server.
 | **Encrypted blocks** | `#Encrypted` blocks unlock with your password and decrypt on the phone, byte-compatible with the web app |
 | **Safe saves** | The server's version check; a conflict offers *Keep mine*, *Use theirs*, or *See the differences* (changed words marked) |
 | **Live** | Pages reload when another device saves them |
-| **Tailscale when needed** | Away from home (mobile data or another Wi-Fi), connects Tailscale while the app is open, and disconnects after |
+| **Tailscale when needed** | Away from home (mobile data or another Wi-Fi), connects Tailscale while the app is open; disconnects when you leave the app or get home. A key in the ☰ menu turns it on or off by hand |
 | **Paired, not logged in** | The password is used once; the phone gets its own token, revocable on the server |
 | **Scratchpad widget** | Your Scratchpad page on the home screen, grouped by day, with a + to add notes; works offline |
 

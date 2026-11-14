@@ -25,6 +25,8 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.VpnKey
+import androidx.compose.material.icons.filled.VpnKeyOff
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material.icons.filled.Add
@@ -52,6 +54,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -288,10 +291,30 @@ private fun LeftPane(model: AppModel, current: Tab, onTab: (Tab) -> Unit, onOpen
         }
         // Settings sits just above the calendar, at the bottom of the pane.
         HorizontalDivider(Modifier.padding(vertical = 4.dp))
+        if (model.showTailscaleButton) TailscaleItem(model)
         NavigationDrawerItem(label = { Text("Settings") }, icon = { Icon(Icons.Filled.Settings, null) }, selected = false, onClick = onSettings, modifier = Modifier.padding(horizontal = 12.dp).height(44.dp).testTag("pane-settings"))
         HorizontalDivider(Modifier.padding(vertical = 4.dp))
         MonthCalendar(days, java.time.DayOfWeek.of(model.store.weekStart)) { onOpen(journalName(it)) }
     }
+}
+
+/** The Tailscale key: shows whether the VPN is up; tap to connect or disconnect by hand. */
+@Composable
+private fun TailscaleItem(model: AppModel) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val on by remember { app.blockseq.android.net.Tailscale.vpnActiveFlow(context) }
+        .collectAsState(initial = app.blockseq.android.net.Tailscale.isVpnActive(context))
+    NavigationDrawerItem(
+        label = { Text("Tailscale") },
+        icon = { Icon(if (on) Icons.Filled.VpnKey else Icons.Filled.VpnKeyOff, null, tint = if (on) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant) },
+        badge = { Text(if (model.tailscale.connecting) "Connecting…" else if (on) "On" else "Off", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) },
+        selected = false,
+        onClick = {
+            if (app.blockseq.android.net.Tailscale.isInstalled(context)) model.tailscale.toggle()
+            else android.widget.Toast.makeText(context, "Tailscale is not installed", android.widget.Toast.LENGTH_SHORT).show()
+        },
+        modifier = Modifier.padding(horizontal = 12.dp).height(44.dp).testTag("pane-tailscale"),
+    )
 }
 
 @Composable

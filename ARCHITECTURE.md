@@ -207,7 +207,14 @@ dropped in two cases:
 | The phone joins a Wi-Fi or Ethernet network with working internet while the app is open (`Tailscale.watchWifi` → `networkJoined`) | Tailscale is disconnected and `ensure()` asks again on that network: at home `/api/health` answers and it stays off; on any other Wi-Fi it reconnects. With the VPN up there is no reliable way to ask "would the server answer without it?", and reading the Wi-Fi's name needs the location permission, so it is dropped first and asked then. A network it already decided on is not asked again |
 | The app leaves the screen | A system alarm sends `DISCONNECT_VPN` straight to Tailscale 30 s later, even if Android froze or killed the app; coming back first cancels it |
 
-Only a connection the app made is ever disconnected. The widget's background sync doesn't connect Tailscale;
+Only a connection the app made is ever disconnected.
+
+The key in the left pane (`TailscaleItem`, hidden with Settings → General →
+**Show Tailscale button**) shows the VPN state and connects or disconnects by
+hand (`AutoTailscale.toggle`). What it does is the user's: a connection made
+with it is left alone like one made in Tailscale, and after turning Tailscale
+off with it the app doesn't turn it back on until the app is opened again or
+the phone joins a Wi-Fi network. The widget's background sync doesn't connect Tailscale;
 its queued notes go out the next time the app opens.
 
 ## Privacy

@@ -33,6 +33,15 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     var autoTailscale by mutableStateOf(store.autoTailscale)
         private set
 
+    /** Settings → Show Tailscale button (the key in the left pane). */
+    var showTailscaleButton by mutableStateOf(store.showTailscaleButton)
+        private set
+
+    fun changeShowTailscaleButton(on: Boolean) {
+        store.showTailscaleButton = on
+        showTailscaleButton = on
+    }
+
     fun changeAutoTailscale(on: Boolean) {
         store.autoTailscale = on
         autoTailscale = on

@@ -62,6 +62,11 @@ class Store(context: Context) {
         get() = prefs.getBoolean("auto_tailscale", true)
         set(v) = prefs.edit().putBoolean("auto_tailscale", v).apply()
 
+    /** Show the Tailscale key in the left pane (tap to connect or disconnect). */
+    var showTailscaleButton: Boolean
+        get() = prefs.getBoolean("tailscale_button", true)
+        set(v) = prefs.edit().putBoolean("tailscale_button", v).apply()
+
     /** The Tailscale connection now up was made by the app (kept across an app restart, so it is still cleaned up). */
     var tailscaleOurs: Boolean
         get() = prefs.getBoolean("tailscale_ours", false)
