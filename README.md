@@ -1,5 +1,6 @@
 # Blockseq for Android
 
+[![Release](https://img.shields.io/github/v/release/crome1394/blockseq-android)](https://github.com/crome1394/blockseq-android/releases/latest)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 [![Kotlin 2.2](https://img.shields.io/badge/kotlin-2.2-7F52FF?logo=kotlin&logoColor=white)](https://kotlinlang.org)
 [![Jetpack Compose](https://img.shields.io/badge/UI-Jetpack%20Compose-4285F4?logo=jetpackcompose&logoColor=white)](https://developer.android.com/compose)
@@ -48,7 +49,7 @@ All screenshots use the made-up notes from `tools/demo-server.sh`.
 ## Install
 
 1. Run a [Blockseq server](https://github.com/crome1394/blockseq) (0.1.0 or later with device pairing) behind HTTPS, with `BLOCKSEQ_PASSWORD` set.
-2. Build and install the app (see [Building](#building)), or install a release APK.
+2. Install the APK from the [latest release](https://github.com/crome1394/blockseq-android/releases/latest), or build it yourself (see [Building](#building)).
 3. Open it, enter your server address and password, and tap **Pair**.
 
 The phone must reach the server, e.g. on your network or over a VPN such as Tailscale. With Tailscale installed and logged in, the app connects it by itself when the server is out of reach and disconnects it when you leave the app or get home ([how](ARCHITECTURE.md#tailscale)). Only the Scratchpad widget works offline.
@@ -59,7 +60,7 @@ The phone must reach the server, e.g. on your network or over a VPN such as Tail
 ./gradlew assembleDebug                 # app/build/outputs/apk/debug/app-debug.apk
 adb install -r app/build/outputs/apk/debug/app-debug.apk
 ./gradlew testDebugUnitTest             # unit tests (outline format, tasks, encryption)
-tools/install-release.sh                # minified build (~3 MB), signed with your debug key, installed
+tools/install-release.sh                # minified build (~3 MB), signed and installed on the phone
 ```
 
 Needs JDK 21 and the Android SDK (platform 36). The Gradle wrapper downloads Gradle itself.

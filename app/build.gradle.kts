@@ -17,6 +17,21 @@ android {
         versionName = "0.1.0"
     }
 
+    // Release signing: set RELEASE_STORE_FILE, RELEASE_STORE_PASSWORD, RELEASE_KEY_ALIAS and
+    // RELEASE_KEY_PASSWORD in the environment (see AGENTS.md). Without them the release
+    // build is unsigned, and tools/install-release.sh signs it with the debug key.
+    signingConfigs {
+        val store = System.getenv("RELEASE_STORE_FILE")
+        if (store != null) {
+            create("release") {
+                storeFile = file(store)
+                storePassword = System.getenv("RELEASE_STORE_PASSWORD") ?: ""
+                keyAlias = System.getenv("RELEASE_KEY_ALIAS") ?: ""
+                keyPassword = System.getenv("RELEASE_KEY_PASSWORD") ?: ""
+            }
+        }
+    }
+
     buildTypes {
         // Debug builds install beside the real app, so testing never touches its pairing or widget.
         debug {
@@ -26,6 +41,7 @@ android {
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            signingConfigs.findByName("release")?.let { signingConfig = it }
         }
     }
     compileOptions {

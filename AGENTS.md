@@ -40,6 +40,38 @@ deno run -A tools/decrypt-check.ts http://127.0.0.1:3970 demo-server demo-secret
 - Finish with the unit tests passing, a clean build, and the change checked
   on the phone.
 
+## Releases
+
+Releases are GitHub Releases with the APK attached, signed with the
+maintainer's release key. The key and an env file with its settings live
+outside the repo (`~/.local/share/blockseq-android/`; keep a backup: phones
+only accept updates signed with the same key).
+
+1. Bump `versionCode` and `versionName` in `app/build.gradle.kts`; move the
+   CHANGELOG entries under the new version.
+2. Commit and tag **before** building, so the APK is built from the tag.
+3. Build, check, publish:
+
+```sh
+git commit -am "0.1.1: …" && git tag v0.1.1
+set -a; . ~/.local/share/blockseq-android/credentials.env; set +a
+./gradlew clean :app:assembleRelease    # app/build/outputs/apk/release/app-release.apk
+apksigner verify --print-certs app/build/outputs/apk/release/app-release.apk
+cp app/build/outputs/apk/release/app-release.apk Blockseq-Android-0.1.1.apk
+git push origin master v0.1.1
+gh release create v0.1.1 Blockseq-Android-0.1.1.apk --title "0.1.1" --notes-file notes.md
+```
+
+| | |
+|---|---|
+| Tag | `v<versionName>` |
+| Asset | `Blockseq-Android-<versionName>.apk` |
+| Signing cert SHA-256 | `a0c2385528acc1fbe5563bf31fbd70b46d2d89627e60e566bdd74387ccd0632f` |
+
+`tools/install-release.sh` builds and installs the same signed APK on the
+phone on USB. Without the release key it signs with the Android debug key
+instead; that build can't update, or be updated by, a released one.
+
 ## Rules
 
 **Data safety**

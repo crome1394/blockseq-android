@@ -3,7 +3,7 @@
 All notable changes to Blockseq for Android, newest first. Each entry ends
 with the short commit hash it comes from.
 
-## Unreleased (0.1.0)
+## 0.1.0
 
 The first version. Needs a Blockseq server with device pairing.
 
