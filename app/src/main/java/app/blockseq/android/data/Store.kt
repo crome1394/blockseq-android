@@ -52,6 +52,13 @@ class Store(context: Context) {
         get() = stripesState.value
         set(v) { stripesState.value = v; prefs.edit().putString("journal_stripes", v).apply() }
 
+    /** The editing bar inline (between the edited block and the row above) instead of above the keyboard. */
+    // Observable, so an open page switches at once when changed in Settings.
+    private val editBarInlineState = androidx.compose.runtime.mutableStateOf(prefs.getBoolean("edit_bar_inline", false))
+    var editBarInline: Boolean
+        get() = editBarInlineState.value
+        set(v) { editBarInlineState.value = v; prefs.edit().putBoolean("edit_bar_inline", v).apply() }
+
     /** The day weeks start on in calendars (java.time DayOfWeek value: 7 = Sunday, the default). */
     var weekStart: Int
         get() = prefs.getInt("week_start", 7)

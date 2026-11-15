@@ -131,6 +131,16 @@ fun SettingsScreen(model: AppModel, onBack: () -> Unit) {
                                 Switch(checked = model.controlsAtBottom, onCheckedChange = { model.changeControlsAtBottom(it) })
                             }
                             HorizontalDivider()
+                            Section("Editing bar")
+                            Text("Where the bar of editing buttons (indent, move, status, strikethrough…) sits while you edit a block.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            var inlineBar by remember { mutableStateOf(model.store.editBarInline) }
+                            listOf(false to "Above the keyboard", true to "Inline: between the block and the row above").forEach { (value, label) ->
+                                Row(Modifier.fillMaxWidth().clickable { inlineBar = value; model.store.editBarInline = value }.testTag("edit-bar-${if (value) "inline" else "bottom"}"), verticalAlignment = Alignment.CenterVertically) {
+                                    RadioButton(selected = inlineBar == value, onClick = { inlineBar = value; model.store.editBarInline = value })
+                                    Text(label)
+                                }
+                            }
+                            HorizontalDivider()
                             Section("Search and filter fields")
                             var bottom by remember { mutableStateOf(model.store.searchAtBottom) }
                             listOf(false to "Top", true to "Bottom (easier to reach with one hand)").forEach { (value, label) ->

@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -238,6 +239,60 @@ fun PageScreen(model: AppModel, name: String, onOpen: (String) -> Unit, quickNot
     }
     fun choosePhoto() = pickPhoto.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
 
+    // The editing bar: above the keyboard, or inline above the edited block's row
+    // (Settings → Display → Editing bar).
+    val inlineBar = model.store.editBarInline
+    @Composable
+    fun EditingBar(node: Node, inline: Boolean) {
+        EditBar(
+            inline = inline,
+            onOutdent = { editor.outdent(node) },
+            onIndent = { editor.indent(node) },
+            onUp = { editor.move(node, -1) },
+            onDown = { editor.move(node, 1) },
+            onStatus = { editor.cycleStatus(node); field = TextFieldValue(node.content, TextRange(node.content.length)) },
+            onLineBreak = {
+                val t = field.text.substring(0, field.selection.start) + "\n" + field.text.substring(field.selection.end)
+                field = TextFieldValue(t, TextRange(field.selection.start + 1))
+                editor.setText(node, t)
+            },
+            onStrike = {
+                // A selection is struck through; without one, the line the cursor is on.
+                val (t, a, b) = if (!field.selection.collapsed) {
+                    app.blockseq.android.editor.toggleSelection(field.text, field.selection.min, field.selection.max, "~~")
+                } else {
+                    val c = field.selection.start
+                    val ls = field.text.lastIndexOf('\n', c - 1) + 1
+                    val le = field.text.indexOf('\n', c).let { if (it == -1) field.text.length else it }
+                    val line = field.text.substring(ls, le)
+                    val prefix = if (ls == 0) model.statuses.prefix(line) else ""
+                    val nt = field.text.substring(0, ls) + app.blockseq.android.editor.toggleLine(line, "~~", prefix) + field.text.substring(le)
+                    val pos = (c + nt.length - field.text.length).coerceIn(ls, nt.length)
+                    Triple(nt, pos, pos)
+                }
+                field = TextFieldValue(t, TextRange(a, b))
+                editor.setText(node, t)
+            },
+            onRule = {
+                // On a line of its own, as the web's /hr: here if the line is empty, otherwise after it.
+                val c = field.selection.start
+                val ls = field.text.lastIndexOf('\n', c - 1) + 1
+                val le = field.text.indexOf('\n', c).let { if (it == -1) field.text.length else it }
+                val line = field.text.substring(ls, le)
+                val t = if (line.isBlank()) field.text.substring(0, ls) + "---" + field.text.substring(le)
+                    else field.text.substring(0, ls) + line.trimEnd() + "\n---" + field.text.substring(le)
+                val pos = if (line.isBlank()) ls + 3 else ls + line.trimEnd().length + 4
+                field = TextFieldValue(t, TextRange(pos))
+                editor.setText(node, t)
+            },
+            onDelete = {
+                val above = editor.delete(node)
+                if (above != null) startEdit(above) else stopEdit()
+            },
+            onDone = { stopEdit() },
+            picture = { PictureButton(onCamera = ::openCamera, onGallery = ::choosePhoto, tag = "edit-picture") },
+        )
+    }
     val snackbar = remember { androidx.compose.material3.SnackbarHostState() }
     Scaffold(
         snackbarHost = { androidx.compose.material3.SnackbarHost(snackbar) },
@@ -262,58 +317,11 @@ fun PageScreen(model: AppModel, name: String, onOpen: (String) -> Unit, quickNot
         },
         bottomBar = {
             val node = editing
-            if (node != null) {
-                EditBar(
-                    onOutdent = { editor.outdent(node) },
-                    onIndent = { editor.indent(node) },
-                    onUp = { editor.move(node, -1) },
-                    onDown = { editor.move(node, 1) },
-                    onStatus = { editor.cycleStatus(node); field = TextFieldValue(node.content, TextRange(node.content.length)) },
-                    onLineBreak = {
-                        val t = field.text.substring(0, field.selection.start) + "\n" + field.text.substring(field.selection.end)
-                        field = TextFieldValue(t, TextRange(field.selection.start + 1))
-                        editor.setText(node, t)
-                    },
-                    onStrike = {
-                        // A selection is struck through; without one, the line the cursor is on.
-                        val (t, a, b) = if (!field.selection.collapsed) {
-                            app.blockseq.android.editor.toggleSelection(field.text, field.selection.min, field.selection.max, "~~")
-                        } else {
-                            val c = field.selection.start
-                            val ls = field.text.lastIndexOf('\n', c - 1) + 1
-                            val le = field.text.indexOf('\n', c).let { if (it == -1) field.text.length else it }
-                            val line = field.text.substring(ls, le)
-                            val prefix = if (ls == 0) model.statuses.prefix(line) else ""
-                            val nt = field.text.substring(0, ls) + app.blockseq.android.editor.toggleLine(line, "~~", prefix) + field.text.substring(le)
-                            val pos = (c + nt.length - field.text.length).coerceIn(ls, nt.length)
-                            Triple(nt, pos, pos)
-                        }
-                        field = TextFieldValue(t, TextRange(a, b))
-                        editor.setText(node, t)
-                    },
-                    onRule = {
-                        // On a line of its own, as the web's /hr: here if the line is empty, otherwise after it.
-                        val c = field.selection.start
-                        val ls = field.text.lastIndexOf('\n', c - 1) + 1
-                        val le = field.text.indexOf('\n', c).let { if (it == -1) field.text.length else it }
-                        val line = field.text.substring(ls, le)
-                        val t = if (line.isBlank()) field.text.substring(0, ls) + "---" + field.text.substring(le)
-                            else field.text.substring(0, ls) + line.trimEnd() + "\n---" + field.text.substring(le)
-                        val pos = if (line.isBlank()) ls + 3 else ls + line.trimEnd().length + 4
-                        field = TextFieldValue(t, TextRange(pos))
-                        editor.setText(node, t)
-                    },
-                    onDelete = {
-                        val above = editor.delete(node)
-                        if (above != null) startEdit(above) else stopEdit()
-                    },
-                    onDone = { stopEdit() },
-                    picture = { PictureButton(onCamera = ::openCamera, onGallery = ::choosePhoto, tag = "edit-picture") },
-                )
-            }
+            if (node != null && !inlineBar) EditingBar(node, inline = false)
         },
     ) { pad ->
-        Column(Modifier.fillMaxSize().padding(pad)) {
+        // Above the keyboard (the bottom bar already is when it is shown; its height is in pad).
+        Column(Modifier.fillMaxSize().padding(pad).consumeWindowInsets(pad).imePadding()) {
             editor.conflict?.let { ConflictBar(it, editor) }
             if (!editor.loaded) {
                 Text("Loading…", Modifier.padding(16.dp))
@@ -481,6 +489,9 @@ fun PageScreen(model: AppModel, name: String, onOpen: (String) -> Unit, quickNot
                     ) {
                     // Tap the thin gap above a block to add a row there.
                     GapAbove(row.depth, gapPressed == n.id)
+                    if (inlineBar && n.id == editingId) editing?.let { node ->
+                        Box(Modifier.padding(start = (8 + row.depth * 20).dp, end = 8.dp, bottom = 4.dp)) { EditingBar(node, inline = true) }
+                    }
                     Row(Modifier.fillMaxWidth().padding(start = (12 + row.depth * 20).dp, end = 12.dp, bottom = 4.dp)) {
                         Bullet(n, editor, numberOf(n)) { editor.toggleCollapse(n) }
                         Spacer(Modifier.width(8.dp))
@@ -767,11 +778,17 @@ private fun TextButtonRow(label: String, onClick: () -> Unit) {
 
 @Composable
 private fun EditBar(
+    inline: Boolean,
     onOutdent: () -> Unit, onIndent: () -> Unit, onUp: () -> Unit, onDown: () -> Unit,
     onStatus: () -> Unit, onLineBreak: () -> Unit, onStrike: () -> Unit, onRule: () -> Unit, onDelete: () -> Unit, onDone: () -> Unit,
     picture: @Composable () -> Unit,
 ) {
-    Surface(tonalElevation = 3.dp, modifier = Modifier.imePadding()) {
+    // Inline it is a rounded strip in the list; at the bottom it rides on the keyboard.
+    Surface(
+        tonalElevation = 3.dp,
+        shape = if (inline) androidx.compose.foundation.shape.RoundedCornerShape(12.dp) else androidx.compose.ui.graphics.RectangleShape,
+        modifier = if (inline) Modifier.testTag("edit-bar-inline") else Modifier.imePadding().testTag("edit-bar"),
+    ) {
         // Nine buttons are wider than a phone: these scroll sideways, Done stays put on the right.
         Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
           Row(Modifier.weight(1f).horizontalScroll(rememberScrollState())) {

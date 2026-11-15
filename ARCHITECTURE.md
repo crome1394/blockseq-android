@@ -118,6 +118,7 @@ broken link.
   stores (`background-color::`, `text-align::`, `heading::`,
   `logseq.order-list-type::`).
 - `---` / `***` / `___` alone on a line is `Part.Rule`, a horizontal line, as in the web app; the editing toolbar inserts one.
+- The editing toolbar (`EditBar` in `ui/PageScreen.kt`) is the page's bottom bar, riding on the keyboard, or, with Settings → Display → Editing bar → Inline (`Store.editBarInline`), an item in the list between the edited block's row and the row above. The page content takes the keyboard's height itself (`imePadding`), so the inline bar and the field stay above the keyboard.
 - Moving and adding rows: press and hold a block, then drag it up or down
   (sideways changes its depth; its children come along; the page scrolls at
   the edges; `depthRange` and `placeNode` in `editor/Reorder.kt` decide where

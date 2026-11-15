@@ -19,7 +19,7 @@ phone, straight from your own server.
 | | |
 |---|---|
 | **Read** | Journals, pages, links, tags, task badges, tables, code and tips; lines join parents and children |
-| **Edit** | Tap a block to edit; Enter splits it; a toolbar to indent, move, strike through, add a rule or a picture |
+| **Edit** | Tap a block to edit; Enter splits it; a toolbar to indent, move, strike through, add a rule or a picture, above the keyboard or inline above the block (a setting) |
 | **Move and add rows** | Press, hold and drag a block (sideways changes its depth); drop it on the bin to delete, with Undo; tap the strip above a block to add a row there |
 | **Block menu** | Press and hold: colour, heading, alignment, move, add row above/below, tag, strikethrough, timestamp, copy, share, cut, delete |
 | **Page ⋯ menu** | New row (tap, or drag to a place), take a photo, choose a picture, lock or unlock |
