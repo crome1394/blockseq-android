@@ -13,8 +13,8 @@ android {
         applicationId = "app.blockseq.android"
         minSdk = 29
         targetSdk = 36
-        versionCode = 1
-        versionName = "0.1.0"
+        versionCode = 2
+        versionName = "0.1.1"
     }
 
     // Release signing: set RELEASE_STORE_FILE, RELEASE_STORE_PASSWORD, RELEASE_KEY_ALIAS and

@@ -3,11 +3,11 @@
 All notable changes to Blockseq for Android, newest first. Each entry ends
 with the short commit hash it comes from.
 
-## Unreleased
+## 0.1.1
 
 ### Added
 
-- Settings → Display → Editing bar: **Inline** puts the editing toolbar between the block you edit and the row above it (as the web app's Inline format bar), instead of above the keyboard.
+- Settings → Display → Editing bar: **Inline** puts the editing toolbar between the block you edit and the row above it (as the web app's Inline format bar), instead of above the keyboard. (`b7e5149`)
 
 ## 0.1.0
 
